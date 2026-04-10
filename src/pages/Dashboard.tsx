@@ -58,7 +58,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     setAssessments(savedAssessments);
     
     // Unique patients count
-    const uniquePatients = new Set(savedAssessments.map((a: any) => a.demographics.fullName + a.demographics.phone));
+    const uniquePatients = new Set(savedAssessments.map((a: any) => (a.demographics?.fullName || "") + (a.demographics?.phone || "")));
     setPatientCount(uniquePatients.size);
 
     // Total revenue
@@ -66,8 +66,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     setRevenue(totalRevenue);
 
     // Gender Distribution
-    const males = savedAssessments.filter((a: any) => a.demographics.gender === "L").length;
-    const females = savedAssessments.filter((a: any) => a.demographics.gender === "P").length;
+    const males = savedAssessments.filter((a: any) => a.demographics?.gender === "L").length;
+    const females = savedAssessments.filter((a: any) => a.demographics?.gender === "P").length;
     setGenderData([
       { name: "Laki-laki", value: males, color: "#2563eb" },
       { name: "Perempuan", value: females, color: "#ec4899" }
@@ -86,7 +86,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   const filteredAssessments = assessments.filter(a => {
     if (genderFilter === "all") return true;
-    return a.demographics.gender === genderFilter;
+    return a.demographics?.gender === genderFilter;
   });
 
   const menuItems = [

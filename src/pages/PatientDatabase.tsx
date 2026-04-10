@@ -42,7 +42,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
 
   const showProgress = (fullName: string, phone: string) => {
     const history = assessments
-      .filter(a => a.demographics.fullName === fullName && a.demographics.phone === phone)
+      .filter(a => a.demographics?.fullName === fullName && a.demographics?.phone === phone)
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
       .map(a => ({
         date: new Date(a.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
@@ -62,8 +62,8 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
 
   const filteredAssessments = assessments.filter(a => {
     const matchesSearch = 
-      a.demographics.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.demographics.phone.includes(searchTerm);
+      (a.demographics?.fullName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (a.demographics?.phone || "").includes(searchTerm);
     return matchesSearch;
   });
 
@@ -162,9 +162,9 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                     
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
-                        <h3 className="text-lg font-black text-slate-900">{a.demographics.fullName}</h3>
+                        <h3 className="text-lg font-black text-slate-900">{a.demographics?.fullName || "Tanpa Nama"}</h3>
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                          {a.demographics.gender === "L" ? "Laki-laki" : "Perempuan"}
+                          {a.demographics?.gender === "L" ? "Laki-laki" : "Perempuan"}
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-4 text-sm font-medium text-slate-500">
@@ -174,7 +174,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                         </div>
                         <div className="flex items-center gap-1">
                           <FileText className="h-4 w-4" />
-                          {a.demographics.phone}
+                          {a.demographics?.phone}
                         </div>
                         <div className="flex items-center gap-1">
                           <Database className="h-4 w-4" />
@@ -191,7 +191,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
 
                     <div className="flex items-center gap-3">
                       <button 
-                        onClick={() => showProgress(a.demographics.fullName, a.demographics.phone)}
+                        onClick={() => showProgress(a.demographics?.fullName, a.demographics?.phone)}
                         className="flex items-center gap-2 rounded-xl bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-600 hover:bg-indigo-100 transition-all"
                       >
                         <TrendingUp className="h-4 w-4" />

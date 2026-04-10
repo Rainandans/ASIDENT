@@ -9,18 +9,21 @@
 @layer base {
   html {
     font-size: 14px;
+    scroll-behavior: smooth;
   }
   body {
     @apply bg-slate-50 text-slate-900 antialiased;
     background-image: 
-      radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.05) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.08) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
   }
 
   /* Custom Scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -28,18 +31,31 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+    @apply bg-slate-200 rounded-full hover:bg-blue-400 transition-colors;
   }
 }
 
 .glass-card {
-  @apply bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-blue-900/5;
+  @apply bg-white/70 backdrop-blur-2xl border border-white/60 shadow-2xl shadow-blue-900/5;
 }
 
 .brand-gradient {
-  @apply bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800;
+  @apply bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700;
 }
 
 .brand-text-gradient {
-  @apply bg-gradient-to-br from-blue-600 to-indigo-700 bg-clip-text text-transparent;
+  @apply bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 bg-clip-text text-transparent;
+}
+
+.soft-shadow {
+  box-shadow: 0 20px 40px -15px rgba(37, 99, 235, 0.1);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
 }

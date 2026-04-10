@@ -335,14 +335,15 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     const assessments = JSON.parse(localStorage.getItem("asident_assessments") || "[]");
     // Get unique patients by name or phone
     const uniquePatients = assessments.reduce((acc: any[], curr: any) => {
-      const exists = acc.find(p => p.demographics.fullName === curr.demographics.fullName || p.demographics.phone === curr.demographics.phone);
+      if (!curr.demographics) return acc;
+      const exists = acc.find(p => p.demographics?.fullName === curr.demographics?.fullName || p.demographics?.phone === curr.demographics?.phone);
       if (!exists) acc.push(curr);
       return acc;
     }, []);
 
     const filtered = uniquePatients.filter((p: any) => 
-      p.demographics.fullName.toLowerCase().includes(term.toLowerCase()) || 
-      p.demographics.phone.includes(term)
+      (p.demographics?.fullName || "").toLowerCase().includes(term.toLowerCase()) || 
+      (p.demographics?.phone || "").includes(term)
     );
     setSearchResults(filtered);
   };
@@ -513,8 +514,8 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                               className="flex w-full items-center justify-between border-b border-slate-50 p-4 text-left hover:bg-blue-50 transition-colors"
                             >
                               <div>
-                                <p className="font-bold text-slate-900">{p.demographics.fullName}</p>
-                                <p className="text-xs text-slate-500">{p.demographics.phone} • {p.demographics.age} Thn</p>
+                                <p className="font-bold text-slate-900">{p.demographics?.fullName || "Tanpa Nama"}</p>
+                                <p className="text-xs text-slate-500">{p.demographics?.phone} • {p.demographics?.age} Thn</p>
                               </div>
                               <Plus className="h-4 w-4 text-blue-500" />
                             </button>
