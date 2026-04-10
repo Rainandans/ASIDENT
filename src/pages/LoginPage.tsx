@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { LogIn, User, ShieldCheck, Stethoscope, RefreshCw, UserPlus, Mail, Phone, Lock, ChevronRight } from "lucide-react";
 import { cn } from "../lib/utils";
-import { auth, googleProvider, signInWithPopup, db, doc, getDoc } from "../lib/firebase";
+import { auth, googleProvider, signInWithPopup, db, doc, getDoc, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "../lib/firebase";
 
 interface LoginPageProps {
   onLogin: (name: string, role: string, email?: string) => void;
@@ -66,16 +66,65 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (captchaInput.toUpperCase() !== captcha) {
       setError("Captcha salah!");
       return;
     }
-    
-    // Fallback for manual login (simulated)
-    const role = email === "rainandanabilatu@gmail.com" ? "admin" : "pasien";
-    onLogin(fullName || email.split('@')[0], role, email);
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      if (isRegister) {
+        // Create new user in Firebase Auth
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(result.user, { displayName: fullName });
+        
+        // Default role for new registration is always "pasien"
+        onLogin(fullName, "pasien", email);
+      } else {
+        // Sign in existing user
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        const user = result.user;
+
+        // Determine role from Firestore config
+        const configDoc = await getDoc(doc(db, "config", "user_management"));
+        let role = "pasien";
+        
+        if (configDoc.exists()) {
+          const data = configDoc.data();
+          const adminEmails = data.adminEmails || ["rainandanabilatu@gmail.com"];
+          const examinerEmails = data.examinerEmails || [];
+          
+          if (adminEmails.includes(user.email)) {
+            role = "admin";
+          } else if (examinerEmails.includes(user.email)) {
+            role = "pemeriksa";
+          }
+        } else if (user.email === "rainandanabilatu@gmail.com") {
+          role = "admin";
+        }
+
+        onLogin(user.displayName || user.email?.split('@')[0] || "User", role, user.email || "");
+      }
+    } catch (err: any) {
+      console.error("Auth error:", err);
+      if (err.code === 'auth/email-already-in-use') {
+        setError("Email sudah terdaftar.");
+      } else if (err.code === 'auth/invalid-credential') {
+        setError("Email atau password salah.");
+      } else if (err.code === 'auth/weak-password') {
+        setError("Password terlalu lemah (min. 6 karakter).");
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError("Login email/password belum diaktifkan di Firebase Console.");
+      } else {
+        setError("Terjadi kesalahan. Silakan coba lagi.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
