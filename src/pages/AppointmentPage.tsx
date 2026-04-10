@@ -22,9 +22,19 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
   const [editingId, setEditingId] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   
   useEffect(() => {
+    if (!user.uid) {
+      setFetchError("Sesi tidak valid. Silakan login kembali.");
+      return;
+    }
+
+    setFetchError(null);
     setIsRefreshing(true);
+    
+    console.log("Fetching appointments for role:", user.role, "UID:", user.uid);
+
     const q = user.role.toLowerCase() === "pasien"
       ? query(collection(db, "appointments"), where("patient", "==", user.name))
       : collection(db, "appointments");
@@ -34,21 +44,26 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
       snapshot.forEach((doc) => {
         apps.push({ id: doc.id, ...doc.data() } as Appointment);
       });
+      
+      console.log(`Fetched ${apps.length} appointments`);
+      
       // Sort by date and time
       apps.sort((a, b) => {
-        const dateCompare = a.date.localeCompare(b.date);
+        const dateCompare = (a.date || "").localeCompare(b.date || "");
         if (dateCompare !== 0) return dateCompare;
-        return a.time.localeCompare(b.time);
+        return (a.time || "").localeCompare(b.time || "");
       });
+      
       setAppointments(apps);
       setIsRefreshing(false);
-    }, (error) => {
-      console.error("Firestore Error:", error);
+    }, (error: any) => {
+      console.error("Firestore Subscription Error:", error);
+      setFetchError(`Gagal memuat data: ${error.message || "Izin ditolak"}`);
       setIsRefreshing(false);
     });
 
     return () => unsubscribe();
-  }, [user.role, user.name]);
+  }, [user.role, user.name, user.uid]);
 
   const loadAppointments = () => {
     // onSnapshot handles this automatically, but we can show the spinner
@@ -287,7 +302,7 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
               Jadwal Janji Temu
-              <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-full border border-blue-200">v2.2</span>
+              <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-full border border-blue-200">v2.3</span>
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">Manajemen Kunjungan Pasien</p>
@@ -333,7 +348,21 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
       </header>
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {appointments.length > 0 ? appointments.map((app, i) => (
+        {fetchError ? (
+          <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+            <div className="mb-6 rounded-full bg-red-50 p-8 text-red-500">
+              <ShieldCheck className="h-16 w-16" />
+            </div>
+            <h3 className="text-2xl font-black text-slate-900">Gagal Memuat Data</h3>
+            <p className="max-w-xs text-red-500 font-medium mt-2">{fetchError}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-6 rounded-2xl bg-slate-900 px-8 py-4 text-xs font-black text-white uppercase tracking-widest hover:bg-blue-600 transition-all"
+            >
+              Muat Ulang Halaman
+            </button>
+          </div>
+        ) : appointments.length > 0 ? appointments.map((app, i) => (
           <motion.div 
             key={app.id}
             initial={{ opacity: 0, y: 20 }}
