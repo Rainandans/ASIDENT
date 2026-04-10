@@ -101,6 +101,13 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
   const handleAddAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Final validation before saving
+    if (!user.uid) {
+      console.error("Auth Error: user.uid is missing", user);
+      alert("Sesi login Anda tidak valid (UID hilang). Silakan logout dan login kembali.");
+      return;
+    }
+
     const finalApp = {
       patient: user.role === "pasien" ? user.name : newApp.patient,
       date: newApp.date,
@@ -108,7 +115,9 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
       type: newApp.type,
       status: user.role === "pasien" ? "PENDING" : newApp.status,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      createdBy: user.uid,
+      createdByRole: user.role
     };
 
     // Basic validation
@@ -116,6 +125,9 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
       alert("Mohon lengkapi semua data janji temu.");
       return;
     }
+
+    console.log("Attempting to save appointment:", finalApp);
+    console.log("Current Firebase User:", auth.currentUser?.uid);
 
     try {
       if (editingId) {
@@ -265,12 +277,17 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
               Jadwal Janji Temu
-              <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-full border border-blue-200">v2.1</span>
+              <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-full border border-blue-200">v2.2</span>
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">Manajemen Kunjungan Pasien</p>
               <span className="h-1 w-1 rounded-full bg-slate-300"></span>
               <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em]">Akses: {user.role}</p>
+              <span className="h-1 w-1 rounded-full bg-slate-300"></span>
+              <div className="flex items-center gap-1">
+                <div className={cn("h-1.5 w-1.5 rounded-full", user.uid ? "bg-emerald-500" : "bg-red-500")}></div>
+                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em]">Auth: {user.uid ? "Aktif" : "Tidak Ada"}</p>
+              </div>
             </div>
           </div>
         </div>

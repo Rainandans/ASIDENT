@@ -56,8 +56,8 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const handleLogin = (name: string, role: string, email?: string) => {
-    const newUser = { name, role, email };
+  const handleLogin = (name: string, role: string, email?: string, uid?: string) => {
+    const newUser = { name, role, email, uid };
     setUser(newUser);
     localStorage.setItem("asident_user", JSON.stringify(newUser));
   };

@@ -57,7 +57,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         role = "admin";
       }
       
-      onLogin(user.displayName || user.email?.split('@')[0] || "User", role, user.email || "");
+      onLogin(user.displayName || user.email?.split('@')[0] || "User", role, user.email || "", user.uid);
     } catch (err: any) {
       console.error("Login error:", err);
       setError("Gagal masuk dengan Google. Silakan coba lagi.");
@@ -83,7 +83,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         await updateProfile(result.user, { displayName: fullName });
         
         // Default role for new registration is always "pasien"
-        onLogin(fullName, "pasien", email);
+        onLogin(fullName, "pasien", email, result.user.uid);
       } else {
         // Sign in existing user
         const result = await signInWithEmailAndPassword(auth, email, password);
@@ -107,7 +107,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           role = "admin";
         }
 
-        onLogin(user.displayName || user.email?.split('@')[0] || "User", role, user.email || "");
+        onLogin(user.displayName || user.email?.split('@')[0] || "User", role, user.email || "", user.uid);
       }
     } catch (err: any) {
       console.error("Auth error:", err);

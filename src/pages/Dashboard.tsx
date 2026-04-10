@@ -276,15 +276,18 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <Bell className="h-5 w-5 group-hover:shake" />
               <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white animate-pulse"></span>
             </button>
-            <div className="flex items-center gap-3 pl-6 border-l border-slate-200/50">
-              <div className="text-right">
-                <p className="text-sm font-black text-slate-900 leading-tight">{user.name}</p>
-                <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">{user.role}</p>
+              <div className="flex items-center gap-3 pl-6 border-l border-slate-200/50">
+                <div className="text-right">
+                  <p className="text-sm font-black text-slate-900 leading-tight">{user.name}</p>
+                  <div className="flex items-center justify-end gap-1 mt-0.5">
+                    <div className={cn("h-1.5 w-1.5 rounded-full", user.uid ? "bg-emerald-500" : "bg-red-500")}></div>
+                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">{user.role}</p>
+                  </div>
+                </div>
+                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 border border-white/50 flex items-center justify-center text-white font-black shadow-lg shadow-blue-500/20">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
               </div>
-              <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 border border-white/50 flex items-center justify-center text-white font-black shadow-lg shadow-blue-500/20">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-            </div>
           </div>
         </header>
 
