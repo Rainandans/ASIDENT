@@ -37,7 +37,9 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("asident_assessments") || "[]");
-    setAssessments(saved);
+    // Deduplicate by ID to prevent React key warnings
+    const unique = saved.filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i);
+    setAssessments(unique);
   }, []);
 
   const showProgress = (fullName: string, phone: string) => {

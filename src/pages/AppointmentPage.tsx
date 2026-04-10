@@ -24,7 +24,10 @@ export default function AppointmentPage() {
   // Load appointments from localStorage
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("asident_appointments") || "[]");
-    if (saved.length === 0) {
+    // Deduplicate by ID
+    const unique = saved.filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i);
+    
+    if (unique.length === 0) {
       // Default mock data if empty
       const initial = [
         { id: 1, patient: "Ali Hamzah", date: "2026-04-10", time: "09:00", type: "Scaling", status: "CONFIRMED" },
@@ -33,7 +36,7 @@ export default function AppointmentPage() {
       setAppointments(initial as Appointment[]);
       localStorage.setItem("asident_appointments", JSON.stringify(initial));
     } else {
-      setAppointments(saved);
+      setAppointments(unique);
     }
   }, []);
 
@@ -83,7 +86,7 @@ export default function AppointmentPage() {
       );
       saveToStorage(updated);
     } else {
-      const id = Date.now();
+      const id = Date.now() + Math.floor(Math.random() * 1000);
       const updated = [...appointments, { id, ...newApp }];
       saveToStorage(updated);
     }

@@ -280,7 +280,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     } else {
       // Save New Assessment
       const newAssessment = {
-        id: Date.now(),
+        id: Date.now() + Math.floor(Math.random() * 1000),
         ...data,
         examiner: user.name,
         createdAt: new Date().toISOString()
@@ -300,7 +300,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       }, 0);
 
       const newBill = {
-        id: Date.now() + 1,
+        id: Date.now() + Math.floor(Math.random() * 1000) + 1,
         patient: data.demographics.fullName || "Pasien Umum",
         date: new Date().toISOString().split('T')[0],
         services: selectedServices.map((id: string) => DENTAL_SERVICES.find(x => x.id === id)?.name),
@@ -1335,10 +1335,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
 
                                           <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
                                             <div>
-                                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                                                 <div className="h-1 w-1 rounded-full bg-slate-300" />
                                                 Skor Kalkulus
-                                              </p>
+                                              </div>
                                               <div className="grid grid-cols-4 gap-2">
                                                 {[0, 1, 2, 3].map(score => (
                                                   <button
@@ -1362,10 +1362,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                                             </div>
 
                                             <div>
-                                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                                                 <div className="h-1 w-1 rounded-full bg-yellow-400" />
                                                 Skor Stain
-                                              </p>
+                                              </div>
                                               <div className="grid grid-cols-4 gap-2">
                                                 {[0, 1, 2, 3].map(score => (
                                                   <button
