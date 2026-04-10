@@ -14,7 +14,7 @@ interface Appointment {
   status: "PENDING" | "CONFIRMED" | "CANCELLED";
 }
 
-export default function AppointmentPage({ user, onLogout }: { user: { name: string; role: string }, onLogout: () => void }) {
+export default function AppointmentPage({ user, onLogout }: { user: { name: string; role: string; uid?: string }, onLogout: () => void }) {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [isExistingPatient, setIsExistingPatient] = useState(user.role !== "pasien");
@@ -130,20 +130,23 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
     } catch (error: any) {
       console.error("Error saving appointment:", error);
       
-      // Detailed error for debugging
       const errInfo = {
         error: error.message || String(error),
-        code: error.code,
-        auth: {
+        operationType: editingId ? 'update' : 'create',
+        path: `appointments/${editingId || 'new'}`,
+        authInfo: {
+          userId: user.uid,
           role: user.role,
           name: user.name
         },
         data: finalApp
       };
-      console.error("Firestore Error Details:", JSON.stringify(errInfo, null, 2));
+      console.error('Firestore Error: ', JSON.stringify(errInfo, null, 2));
       
       if (error.code === 'permission-denied') {
-        alert("Gagal menyimpan: Anda tidak memiliki izin untuk melakukan tindakan ini.");
+        alert("Gagal menyimpan: Anda tidak memiliki izin untuk melakukan tindakan ini. Pastikan Anda sudah login dengan akun yang benar.");
+      } else if (error.message?.includes('offline')) {
+        alert("Gagal menyimpan: Koneksi internet terputus atau database tidak dapat dijangkau.");
       } else {
         alert(`Gagal menyimpan janji temu: ${error.message || "Terjadi kesalahan sistem"}`);
       }
@@ -260,7 +263,10 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
             <ChevronLeft className="h-6 w-6" />
           </button>
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Jadwal Janji Temu</h1>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              Jadwal Janji Temu
+              <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-full border border-blue-200">v2.1</span>
+            </h1>
             <div className="flex items-center gap-2 mt-1">
               <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">Manajemen Kunjungan Pasien</p>
               <span className="h-1 w-1 rounded-full bg-slate-300"></span>

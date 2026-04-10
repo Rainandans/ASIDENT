@@ -38,10 +38,12 @@ export default function App() {
         }
         
         const userData = {
+          uid: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "User",
           role,
           email: firebaseUser.email || ""
         };
+        console.log("User Logged In:", userData);
         setUser(userData);
         localStorage.setItem("asident_user", JSON.stringify(userData));
       } else {
