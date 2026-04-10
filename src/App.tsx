@@ -56,7 +56,7 @@ export default function App() {
             />
             <Route 
               path="/appointments" 
-              element={user ? <AppointmentPage /> : <Navigate to="/login" />} 
+              element={user ? <AppointmentPage user={user} /> : <Navigate to="/login" />} 
             />
             <Route 
               path="/education" 

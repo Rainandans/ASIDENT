@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Calendar, ChevronLeft, Plus, X, CheckCircle2, Edit3, Trash2, Printer, Search, Clock, User, Stethoscope } from "lucide-react";
+import { Calendar, ChevronLeft, Plus, X, CheckCircle2, Edit3, Trash2, Printer, Search, Clock, User, Stethoscope, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
@@ -13,10 +13,10 @@ interface Appointment {
   status: "PENDING" | "CONFIRMED" | "CANCELLED";
 }
 
-export default function AppointmentPage() {
+export default function AppointmentPage({ user }: { user: { name: string; role: string } }) {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
-  const [isExistingPatient, setIsExistingPatient] = useState(false);
+  const [isExistingPatient, setIsExistingPatient] = useState(user.role !== "pasien");
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -27,8 +27,8 @@ export default function AppointmentPage() {
     // Deduplicate by ID
     const unique = saved.filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i);
     
-    if (unique.length === 0) {
-      // Default mock data if empty
+    if (unique.length === 0 && user.role !== "pasien") {
+      // Default mock data if empty and not a patient
       const initial = [
         { id: 1, patient: "Ali Hamzah", date: "2026-04-10", time: "09:00", type: "Scaling", status: "CONFIRMED" },
         { id: 2, patient: "Siti Aminah", date: "2026-04-10", time: "10:30", type: "Konsultasi", status: "CONFIRMED" },
@@ -38,7 +38,12 @@ export default function AppointmentPage() {
     } else {
       setAppointments(unique);
     }
-  }, []);
+  }, [user.role]);
+
+  // Filter appointments based on role
+  const displayAppointments = user.role === "pasien" 
+    ? appointments.filter(app => app.patient === user.name)
+    : appointments;
 
   // Save appointments to localStorage
   const saveToStorage = (updated: Appointment[]) => {
@@ -71,23 +76,30 @@ export default function AppointmentPage() {
     type: string;
     status: "PENDING" | "CONFIRMED" | "CANCELLED";
   }>({
-    patient: "",
+    patient: user.role === "pasien" ? user.name : "",
     date: "",
     time: "",
     type: "Konsultasi",
-    status: "CONFIRMED"
+    status: user.role === "pasien" ? "PENDING" : "CONFIRMED"
   });
 
   const handleAddAppointment = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Ensure patient name is set for logged in patients
+    const finalApp = {
+      ...newApp,
+      patient: user.role === "pasien" ? user.name : newApp.patient
+    };
+
     if (editingId) {
       const updated = appointments.map(app => 
-        app.id === editingId ? { ...app, ...newApp } : app
+        app.id === editingId ? { ...app, ...finalApp } : app
       );
       saveToStorage(updated);
     } else {
       const id = Date.now() + Math.floor(Math.random() * 1000);
-      const updated = [...appointments, { id, ...newApp }];
+      const updated = [...appointments, { id, ...finalApp }];
       saveToStorage(updated);
     }
     closeModal();
@@ -96,7 +108,13 @@ export default function AppointmentPage() {
   const closeModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setNewApp({ patient: "", date: "", time: "", type: "Konsultasi", status: "CONFIRMED" });
+    setNewApp({ 
+      patient: user.role === "pasien" ? user.name : "", 
+      date: "", 
+      time: "", 
+      type: "Konsultasi", 
+      status: user.role === "pasien" ? "PENDING" : "CONFIRMED" 
+    });
     setSearchQuery("");
   };
 
@@ -208,7 +226,7 @@ export default function AppointmentPage() {
       </header>
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {appointments.length > 0 ? appointments.map((app, i) => (
+        {displayAppointments.length > 0 ? displayAppointments.map((app, i) => (
           <motion.div 
             key={app.id}
             initial={{ opacity: 0, y: 20 }}
@@ -224,7 +242,8 @@ export default function AppointmentPage() {
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Status</span>
                 <span className={cn(
                   "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest",
-                  app.status === "CONFIRMED" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                  app.status === "CONFIRMED" ? "bg-emerald-50 text-emerald-600" : 
+                  app.status === "PENDING" ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
                 )}>
                   {app.status}
                 </span>
@@ -264,18 +283,22 @@ export default function AppointmentPage() {
                 <Printer className="h-4 w-4" />
                 Cetak
               </button>
-              <button 
-                onClick={() => openEditModal(app)}
-                className="rounded-2xl bg-blue-50 p-4 text-blue-600 hover:bg-blue-100 transition-all"
-              >
-                <Edit3 className="h-5 w-5" />
-              </button>
-              <button 
-                onClick={() => handleDelete(app.id)}
-                className="rounded-2xl bg-red-50 p-4 text-red-500 hover:bg-red-100 transition-all"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
+              {(user.role === "admin" || user.role === "pemeriksa" || (user.role === "pasien" && app.status === "PENDING")) && (
+                <>
+                  <button 
+                    onClick={() => openEditModal(app)}
+                    className="rounded-2xl bg-blue-50 p-4 text-blue-600 hover:bg-blue-100 transition-all"
+                  >
+                    <Edit3 className="h-5 w-5" />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(app.id)}
+                    className="rounded-2xl bg-red-50 p-4 text-red-500 hover:bg-red-100 transition-all"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </>
+              )}
             </div>
           </motion.div>
         )) : (
@@ -319,36 +342,45 @@ export default function AppointmentPage() {
               </div>
 
               <form onSubmit={handleAddAppointment} className="p-10 space-y-8">
-                {/* Patient Type Toggle */}
-                <div className="flex rounded-2xl bg-slate-100 p-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setIsExistingPatient(false)}
-                    className={cn(
-                      "flex-1 rounded-xl py-3.5 text-xs font-black uppercase tracking-widest transition-all",
-                      !isExistingPatient ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    )}
-                  >
-                    Pasien Baru
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsExistingPatient(true)}
-                    className={cn(
-                      "flex-1 rounded-xl py-3.5 text-xs font-black uppercase tracking-widest transition-all",
-                      isExistingPatient ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    )}
-                  >
-                    Pasien Lama
-                  </button>
-                </div>
+                {/* Patient Type Toggle - Only for Admin */}
+                {user.role !== "pasien" && (
+                  <div className="flex rounded-2xl bg-slate-100 p-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsExistingPatient(false)}
+                      className={cn(
+                        "flex-1 rounded-xl py-3.5 text-xs font-black uppercase tracking-widest transition-all",
+                        !isExistingPatient ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      )}
+                    >
+                      Pasien Baru
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsExistingPatient(true)}
+                      className={cn(
+                        "flex-1 rounded-xl py-3.5 text-xs font-black uppercase tracking-widest transition-all",
+                        isExistingPatient ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      )}
+                    >
+                      Pasien Lama
+                    </button>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
                     <User className="h-3 w-3" />
                     Nama Pasien
                   </label>
-                  {isExistingPatient ? (
+                  {user.role === "pasien" ? (
+                    <input 
+                      type="text" 
+                      readOnly
+                      value={user.name}
+                      className="w-full rounded-2xl border-2 border-slate-100 bg-slate-100 px-6 py-5 text-sm font-bold text-slate-500 outline-none cursor-not-allowed"
+                    />
+                  ) : isExistingPatient ? (
                     <div className="relative">
                       <div className="relative group">
                         <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
@@ -427,29 +459,48 @@ export default function AppointmentPage() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-                    <Stethoscope className="h-3 w-3" />
-                    Jenis Layanan
-                  </label>
-                  <select 
-                    value={newApp.type}
-                    onChange={(e) => setNewApp({...newApp, type: e.target.value})}
-                    className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-6 py-5 text-sm font-bold outline-none focus:border-blue-500 focus:bg-white transition-all appearance-none"
-                  >
-                    <option value="Konsultasi">Konsultasi Umum</option>
-                    <option value="Scaling">Scaling (Pembersihan Karang)</option>
-                    <option value="Penambalan">Penambalan Gigi</option>
-                    <option value="Pencabutan">Pencabutan Gigi</option>
-                    <option value="Pemasangan Behel">Pemasangan Behel</option>
-                    <option value="TAF">TAF (Topical Aplikasi Flour)</option>
-                    <option value="Cabut Gigi Susu">Cabut Gigi Susu</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                      <Stethoscope className="h-3 w-3" />
+                      Layanan
+                    </label>
+                    <select 
+                      value={newApp.type}
+                      onChange={(e) => setNewApp({...newApp, type: e.target.value})}
+                      className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-6 py-5 text-sm font-bold outline-none focus:border-blue-500 focus:bg-white transition-all appearance-none"
+                    >
+                      <option value="Konsultasi">Konsultasi</option>
+                      <option value="Scaling">Scaling</option>
+                      <option value="Penambalan">Penambalan</option>
+                      <option value="Pencabutan">Pencabutan</option>
+                      <option value="Pemasangan Behel">Behel</option>
+                      <option value="TAF">TAF</option>
+                      <option value="Cabut Gigi Susu">Cabut Gigi Susu</option>
+                    </select>
+                  </div>
+                  {(user.role === "admin" || user.role === "pemeriksa") && (
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+                        <ShieldCheck className="h-3 w-3" />
+                        Status
+                      </label>
+                      <select 
+                        value={newApp.status}
+                        onChange={(e) => setNewApp({...newApp, status: e.target.value as any})}
+                        className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-6 py-5 text-sm font-bold outline-none focus:border-blue-500 focus:bg-white transition-all appearance-none"
+                      >
+                        <option value="PENDING">PENDING</option>
+                        <option value="CONFIRMED">CONFIRMED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <button 
                   type="submit"
-                  disabled={!newApp.patient || !newApp.date || !newApp.time}
+                  disabled={(user.role !== "pasien" && !newApp.patient) || !newApp.date || !newApp.time}
                   className="mt-4 flex w-full items-center justify-center gap-3 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-700 py-6 text-sm font-black text-white shadow-2xl shadow-blue-500/30 transition-all hover:shadow-blue-500/50 active:scale-95 uppercase tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <CheckCircle2 className="h-6 w-6" />
