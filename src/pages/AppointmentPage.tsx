@@ -102,20 +102,51 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
     e.preventDefault();
     
     const finalApp = {
-      ...newApp,
-      patient: user.role === "pasien" ? user.name : newApp.patient
+      patient: user.role === "pasien" ? user.name : newApp.patient,
+      date: newApp.date,
+      time: newApp.time,
+      type: newApp.type,
+      status: user.role === "pasien" ? "PENDING" : newApp.status,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
+
+    // Basic validation
+    if (!finalApp.patient || !finalApp.date || !finalApp.time) {
+      alert("Mohon lengkapi semua data janji temu.");
+      return;
+    }
 
     try {
       if (editingId) {
-        await updateDoc(doc(db, "appointments", editingId), finalApp);
+        await updateDoc(doc(db, "appointments", editingId), {
+          ...finalApp,
+          updatedAt: new Date().toISOString()
+        });
       } else {
         await addDoc(collection(db, "appointments"), finalApp);
       }
       closeModal();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving appointment:", error);
-      alert("Gagal menyimpan janji temu. Silakan coba lagi.");
+      
+      // Detailed error for debugging
+      const errInfo = {
+        error: error.message || String(error),
+        code: error.code,
+        auth: {
+          role: user.role,
+          name: user.name
+        },
+        data: finalApp
+      };
+      console.error("Firestore Error Details:", JSON.stringify(errInfo, null, 2));
+      
+      if (error.code === 'permission-denied') {
+        alert("Gagal menyimpan: Anda tidak memiliki izin untuk melakukan tindakan ini.");
+      } else {
+        alert(`Gagal menyimpan janji temu: ${error.message || "Terjadi kesalahan sistem"}`);
+      }
     }
   };
 

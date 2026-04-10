@@ -34,7 +34,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
   const [assessments, setAssessments] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
-  const [selectedPatientHistory, setSelectedPatientHistory] = useState<any[] | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<{ fullName: string; phone: string } | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "assessments"), (snapshot) => {
@@ -49,9 +49,15 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
     return () => unsubscribe();
   }, []);
 
-  const showProgress = (fullName: string, phone: string) => {
-    const history = assessments
-      .filter(a => a.demographics?.fullName === fullName && a.demographics?.phone === phone)
+  const selectedPatientHistory = React.useMemo(() => {
+    if (!selectedPatient) return null;
+    return assessments
+      .filter(a => {
+        const matchesName = a.demographics?.fullName === selectedPatient.fullName;
+        // If phone is present in both, it must match. If missing in one, we trust the name.
+        const matchesPhone = !selectedPatient.phone || !a.demographics?.phone || a.demographics?.phone === selectedPatient.phone;
+        return matchesName && matchesPhone;
+      })
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
       .map(a => {
         // Fallback calculation if score is missing
@@ -80,7 +86,10 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
           plaque: plaqueScore || 0,
         };
       });
-    setSelectedPatientHistory(history);
+  }, [assessments, selectedPatient]);
+
+  const showProgress = (fullName: string, phone: string) => {
+    setSelectedPatient({ fullName, phone });
   };
 
   const handleDelete = async (id: string) => {
@@ -274,7 +283,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedPatientHistory(null)}
+              onClick={() => setSelectedPatient(null)}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             />
             <motion.div 
@@ -289,7 +298,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                   <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Tren Kesehatan Gigi & Mulut</p>
                 </div>
                 <button 
-                  onClick={() => setSelectedPatientHistory(null)}
+                  onClick={() => setSelectedPatient(null)}
                   className="rounded-full bg-slate-100 p-3 text-slate-500 hover:bg-slate-200 transition-all"
                 >
                   <X className="h-6 w-6" />
