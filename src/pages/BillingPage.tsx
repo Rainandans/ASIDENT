@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from "motion/react";
 import { CreditCard, ChevronLeft, Download, CheckCircle2, Clock, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
+import { db, collection, onSnapshot, doc, updateDoc } from "../lib/firebase";
 
 interface Bill {
-  id: number;
+  id: string;
   patient: string;
   date: string;
   services: string[];
@@ -19,26 +20,24 @@ export default function BillingPage({ onLogout }: { onLogout: () => void }) {
   const [filter, setFilter] = useState("ALL");
 
   useEffect(() => {
-    const savedBills = JSON.parse(localStorage.getItem("asident_bills") || "[]");
-    // If no bills, add some mock ones for initial view
-    if (savedBills.length === 0) {
-      const mockBills: Bill[] = [
-        { id: 1, patient: "Ali Hamzah", date: "2026-04-06", services: ["Scaling", "Konsultasi"], total: 350000, status: "PAID" },
-        { id: 2, patient: "Siti Aminah", date: "2026-04-05", services: ["Konsultasi"], total: 150000, status: "UNPAID" },
-      ];
-      setBills(mockBills);
-      localStorage.setItem("asident_bills", JSON.stringify(mockBills));
-    } else {
-      setBills(savedBills);
-    }
+    const unsubscribe = onSnapshot(collection(db, "bills"), (snapshot) => {
+      const data: Bill[] = [];
+      snapshot.forEach((doc) => {
+        data.push({ id: doc.id, ...doc.data() } as Bill);
+      });
+      // Sort by date descending
+      data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setBills(data);
+    });
+    return () => unsubscribe();
   }, []);
 
-  const handlePay = (id: number) => {
-    const updatedBills = bills.map(bill => 
-      bill.id === id ? { ...bill, status: "PAID" as const } : bill
-    );
-    setBills(updatedBills);
-    localStorage.setItem("asident_bills", JSON.stringify(updatedBills));
+  const handlePay = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "bills", id), { status: "PAID" });
+    } catch (error) {
+      console.error("Error updating bill status:", error);
+    }
   };
 
   const filteredBills = filter === "ALL" 

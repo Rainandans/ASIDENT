@@ -10,16 +10,48 @@ import NotificationPage from "./pages/NotificationPage";
 import UserManagement from "./pages/UserManagement";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "motion/react";
+import { auth, db, doc, getDoc, onSnapshot } from "./lib/firebase";
 
 export default function App() {
   const [user, setUser] = useState<{ name: string; role: string; email?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Simple auth check simulation
   useEffect(() => {
-    const savedUser = localStorage.getItem("asident_user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        // Fetch role from Firestore
+        const configDoc = await getDoc(doc(db, "config", "user_management"));
+        let role = "pasien";
+        
+        if (configDoc.exists()) {
+          const data = configDoc.data();
+          const adminEmails = data.adminEmails || ["rainandanabilatu@gmail.com"];
+          const examinerEmails = data.examinerEmails || [];
+          
+          if (adminEmails.includes(firebaseUser.email)) {
+            role = "admin";
+          } else if (examinerEmails.includes(firebaseUser.email)) {
+            role = "pemeriksa";
+          }
+        } else if (firebaseUser.email === "rainandanabilatu@gmail.com") {
+          role = "admin";
+        }
+        
+        const userData = {
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "User",
+          role,
+          email: firebaseUser.email || ""
+        };
+        setUser(userData);
+        localStorage.setItem("asident_user", JSON.stringify(userData));
+      } else {
+        setUser(null);
+        localStorage.removeItem("asident_user");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleLogin = (name: string, role: string, email?: string) => {
@@ -28,10 +60,19 @@ export default function App() {
     localStorage.setItem("asident_user", JSON.stringify(newUser));
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await auth.signOut();
     setUser(null);
     localStorage.removeItem("asident_user");
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+      </div>
+    );
+  }
 
   return (
     <Router>

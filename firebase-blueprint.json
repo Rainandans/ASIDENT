@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "Assessment": {
+      "title": "Assessment",
+      "description": "Dental assessment record for a patient",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "demographics": {
+          "type": "object",
+          "properties": {
+            "fullName": { "type": "string" },
+            "phone": { "type": "string" },
+            "gender": { "type": "string", "enum": ["L", "P"] },
+            "age": { "type": "number" }
+          }
+        },
+        "ohis": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "number" },
+            "debris": { "type": "object" },
+            "calculus": { "type": "object" },
+            "indexTeeth": { "type": "object" }
+          }
+        },
+        "plaqueControl": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "number" },
+            "surfaces": { "type": "array" }
+          }
+        },
+        "examiner": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["demographics", "createdAt"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Dental appointment record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "patient": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "CANCELLED"] }
+      },
+      "required": ["patient", "date", "time", "status"]
+    },
+    "Bill": {
+      "title": "Bill",
+      "description": "Billing record for dental services",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "patient": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "services": { "type": "array" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["PAID", "UNPAID"] }
+      },
+      "required": ["patient", "date", "total", "status"]
+    },
+    "UserConfig": {
+      "title": "User Configuration",
+      "description": "Configuration for admin and examiner emails",
+      "type": "object",
+      "properties": {
+        "adminEmails": { "type": "array" },
+        "examinerEmails": { "type": "array" }
+      }
+    }
+  },
+  "firestore": {
+    "/assessments/{assessmentId}": {
+      "schema": "Assessment",
+      "description": "Collection of patient assessments"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Collection of dental appointments"
+    },
+    "/bills/{billId}": {
+      "schema": "Bill",
+      "description": "Collection of billing records"
+    },
+    "/config/user_management": {
+      "schema": "UserConfig",
+      "description": "Global user management configuration"
+    }
+  }
+}

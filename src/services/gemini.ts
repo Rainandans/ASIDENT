@@ -1,10 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export async function generatePatientSummary(patientData: any) {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
   const prompt = `
     Anda adalah seorang asisten terapis gigi profesional. 
     Berdasarkan data pemeriksaan berikut, buatlah ringkasan kondisi kesehatan gigi dan mulut pasien dalam bahasa Indonesia yang mudah dimengerti oleh pasien (awam).
@@ -25,9 +23,11 @@ export async function generatePatientSummary(patientData: any) {
   `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+    });
+    return response.text || "Maaf, ringkasan tidak dapat dihasilkan.";
   } catch (error) {
     console.error("Error generating summary:", error);
     return "Maaf, ringkasan otomatis tidak dapat dibuat saat ini. Silakan hubungi terapis gigi Anda.";

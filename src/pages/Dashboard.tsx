@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
+import { db, collection, onSnapshot, query, where } from "../lib/firebase";
 import { 
   PieChart, 
   Pie, 
@@ -39,7 +40,7 @@ import {
 } from "recharts";
 
 interface DashboardProps {
-  user: { name: string; role: string };
+  user: { name: string; role: string; email?: string };
   onLogout: () => void;
 }
 
@@ -51,38 +52,78 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [genderData, setGenderData] = useState<any[]>([]);
   const [ohisData, setOhisData] = useState<any[]>([]);
   const [genderFilter, setGenderFilter] = useState("all");
+  const [patientStats, setPatientStats] = useState({ appointments: 0, bills: 0, score: "0%" });
 
   useEffect(() => {
-    const savedAssessments = JSON.parse(localStorage.getItem("asident_assessments") || "[]");
-    const bills = JSON.parse(localStorage.getItem("asident_bills") || "[]");
-    setAssessments(savedAssessments);
-    
-    // Unique patients count
-    const uniquePatients = new Set(savedAssessments.map((a: any) => (a.demographics?.fullName || "") + (a.demographics?.phone || "")));
-    setPatientCount(uniquePatients.size);
+    // Listen to assessments
+    const unsubscribeAssessments = onSnapshot(collection(db, "assessments"), (snapshot) => {
+      const data: any[] = [];
+      snapshot.forEach((doc) => data.push(doc.data()));
+      setAssessments(data);
 
-    // Total revenue
-    const totalRevenue = bills.reduce((acc: number, b: any) => acc + (b.total || 0), 0);
-    setRevenue(totalRevenue);
+      // Stats for admin/examiner
+      const uniquePatients = new Set(data.map((a: any) => (a.demographics?.fullName || "") + (a.demographics?.phone || "")));
+      setPatientCount(uniquePatients.size);
 
-    // Gender Distribution
-    const males = savedAssessments.filter((a: any) => a.demographics?.gender === "L").length;
-    const females = savedAssessments.filter((a: any) => a.demographics?.gender === "P").length;
-    setGenderData([
-      { name: "Laki-laki", value: males, color: "#2563eb" },
-      { name: "Perempuan", value: females, color: "#ec4899" }
-    ]);
+      // Gender Distribution
+      const males = data.filter((a: any) => a.demographics?.gender === "L").length;
+      const females = data.filter((a: any) => a.demographics?.gender === "P").length;
+      setGenderData([
+        { name: "Laki-laki", value: males, color: "#2563eb" },
+        { name: "Perempuan", value: females, color: "#ec4899" }
+      ]);
 
-    // OHIS Distribution
-    const good = savedAssessments.filter((a: any) => (a.ohis?.score || 0) <= 1.2).length;
-    const moderate = savedAssessments.filter((a: any) => (a.ohis?.score || 0) > 1.2 && (a.ohis?.score || 0) <= 3.0).length;
-    const poor = savedAssessments.filter((a: any) => (a.ohis?.score || 0) > 3.0).length;
-    setOhisData([
-      { name: "Baik", value: good, color: "#10b981" },
-      { name: "Sedang", value: moderate, color: "#f59e0b" },
-      { name: "Buruk", value: poor, color: "#ef4444" }
-    ]);
-  }, []);
+      // OHIS Distribution
+      const good = data.filter((a: any) => (a.ohis?.score || 0) <= 1.2).length;
+      const moderate = data.filter((a: any) => (a.ohis?.score || 0) > 1.2 && (a.ohis?.score || 0) <= 3.0).length;
+      const poor = data.filter((a: any) => (a.ohis?.score || 0) > 3.0).length;
+      setOhisData([
+        { name: "Baik", value: good, color: "#10b981" },
+        { name: "Sedang", value: moderate, color: "#f59e0b" },
+        { name: "Buruk", value: poor, color: "#ef4444" }
+      ]);
+
+      // If patient, find their latest score
+      if (user.role === "pasien") {
+        const myData = data.filter(a => a.demographics?.fullName === user.name).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        if (myData.length > 0) {
+          setPatientStats(prev => ({ ...prev, score: `${myData[0].ohis?.score || 0}` }));
+        }
+      }
+    });
+
+    // Listen to bills
+    const unsubscribeBills = onSnapshot(collection(db, "bills"), (snapshot) => {
+      let total = 0;
+      let myUnpaid = 0;
+      snapshot.forEach((doc) => {
+        const b = doc.data();
+        total += (b.total || 0);
+        if (user.role === "pasien" && b.patient === user.name && b.status === "UNPAID") {
+          myUnpaid++;
+        }
+      });
+      setRevenue(total);
+      if (user.role === "pasien") {
+        setPatientStats(prev => ({ ...prev, bills: myUnpaid }));
+      }
+    });
+
+    // Listen to appointments for patient
+    let unsubscribeApps = () => {};
+    if (user.role === "pasien") {
+      const q = query(collection(db, "appointments"), where("patient", "==", user.name), where("status", "==", "CONFIRMED"));
+      unsubscribeApps = onSnapshot(q, (snapshot) => {
+        setPatientStats(prev => ({ ...prev, appointments: snapshot.size }));
+      });
+    }
+
+    return () => {
+      unsubscribeAssessments();
+      unsubscribeBills();
+      unsubscribeApps();
+    };
+  }, [user.role, user.name]);
 
   const filteredAssessments = assessments.filter(a => {
     if (genderFilter === "all") return true;
@@ -158,9 +199,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const filteredMenuItems = menuItems.filter(item => item.roles.includes(user.role));
 
   const stats = user.role === "pasien" ? [
-    { label: "Janji Mendatang", value: "0", icon: Calendar, trend: "0" },
-    { label: "Tagihan Aktif", value: "0", icon: CreditCard, trend: "Lunas" },
-    { label: "Skor Kebersihan", value: "0%", icon: Activity, trend: "-" },
+    { label: "Janji Mendatang", value: patientStats.appointments.toString(), icon: Calendar, trend: "Aktif" },
+    { label: "Tagihan Belum Bayar", value: patientStats.bills.toString(), icon: CreditCard, trend: patientStats.bills > 0 ? "Segera Bayar" : "Lunas" },
+    { label: "Skor Kebersihan", value: patientStats.score, icon: Activity, trend: "Terakhir" },
   ] : [
     { label: "Total Pasien", value: patientCount.toLocaleString(), icon: Users, trend: "Aktif" },
     { label: "Kunjungan Hari Ini", value: "0", icon: Activity, trend: "0%" },

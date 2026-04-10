@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from "motion/react";
 import { Calendar, ChevronLeft, Plus, X, CheckCircle2, Edit3, Trash2, Printer, Search, Clock, User, Stethoscope, ShieldCheck, LogOut, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
+import { db, collection, addDoc, onSnapshot, query, where, doc, updateDoc, deleteDoc, setDoc } from "../lib/firebase";
 
 interface Appointment {
-  id: number;
+  id: string;
   patient: string;
   date: string;
   time: string;
@@ -18,58 +19,64 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
   const [showModal, setShowModal] = useState(false);
   const [isExistingPatient, setIsExistingPatient] = useState(user.role !== "pasien");
   const [searchQuery, setSearchQuery] = useState("");
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Load appointments from localStorage
-  const loadAppointments = () => {
+  useEffect(() => {
     setIsRefreshing(true);
-    const saved = localStorage.getItem("asident_appointments");
-    if (!saved) {
-      const initial = [
-        { id: 1, patient: "Ali Hamzah", date: "2026-04-10", time: "09:00", type: "Scaling", status: "CONFIRMED" },
-        { id: 2, patient: "Siti Aminah", date: "2026-04-10", time: "10:30", type: "Konsultasi", status: "CONFIRMED" },
-      ];
-      localStorage.setItem("asident_appointments", JSON.stringify(initial));
-      setAppointments(initial as Appointment[]);
-    } else {
-      const parsed = JSON.parse(saved);
-      const unique = parsed.filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i);
-      setAppointments(unique);
-    }
+    const q = user.role.toLowerCase() === "pasien"
+      ? query(collection(db, "appointments"), where("patient", "==", user.name))
+      : collection(db, "appointments");
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const apps: Appointment[] = [];
+      snapshot.forEach((doc) => {
+        apps.push({ id: doc.id, ...doc.data() } as Appointment);
+      });
+      // Sort by date and time
+      apps.sort((a, b) => {
+        const dateCompare = a.date.localeCompare(b.date);
+        if (dateCompare !== 0) return dateCompare;
+        return a.time.localeCompare(b.time);
+      });
+      setAppointments(apps);
+      setIsRefreshing(false);
+    }, (error) => {
+      console.error("Firestore Error:", error);
+      setIsRefreshing(false);
+    });
+
+    return () => unsubscribe();
+  }, [user.role, user.name]);
+
+  const loadAppointments = () => {
+    // onSnapshot handles this automatically, but we can show the spinner
+    setIsRefreshing(true);
     setTimeout(() => setIsRefreshing(false), 600);
   };
 
-  useEffect(() => {
-    loadAppointments();
-    // Listen for storage changes in other tabs
-    window.addEventListener('storage', loadAppointments);
-    return () => window.removeEventListener('storage', loadAppointments);
-  }, [user.role, user.name]);
-
-  // Filter appointments based on role (case-insensitive)
-  const displayAppointments = user.role.toLowerCase() === "pasien" 
-    ? appointments.filter(app => app.patient.toLowerCase() === user.name.toLowerCase())
-    : appointments;
-
-  // Save appointments to localStorage
-  const saveToStorage = (updated: Appointment[]) => {
-    setAppointments(updated);
-    localStorage.setItem("asident_appointments", JSON.stringify(updated));
-  };
-
-  // Mock existing patients (in real app, fetch from database)
+  // Mock existing patients from Firestore assessments
   const [existingPatients, setExistingPatients] = useState<any[]>([]);
   useEffect(() => {
-    const assessments = JSON.parse(localStorage.getItem("asident_assessments") || "[]");
-    const uniquePatients = assessments.reduce((acc: any[], curr: any) => {
-      if (!curr.demographics) return acc;
-      const exists = acc.find(p => p.demographics?.fullName === curr.demographics?.fullName);
-      if (!exists) acc.push({ id: curr.id, name: curr.demographics.fullName, phone: curr.demographics.phone });
-      return acc;
-    }, []);
-    setExistingPatients(uniquePatients);
+    const unsubscribe = onSnapshot(collection(db, "assessments"), (snapshot) => {
+      const patients: any[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.demographics) {
+          const exists = patients.find(p => p.name === data.demographics.fullName);
+          if (!exists) {
+            patients.push({ 
+              id: doc.id, 
+              name: data.demographics.fullName, 
+              phone: data.demographics.phone 
+            });
+          }
+        }
+      });
+      setExistingPatients(patients);
+    });
+    return () => unsubscribe();
   }, []);
 
   const filteredPatients = existingPatients.filter(p => 
@@ -91,30 +98,25 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
     status: user.role === "pasien" ? "PENDING" : "CONFIRMED"
   });
 
-  const handleAddAppointment = (e: React.FormEvent) => {
+  const handleAddAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Ensure patient name is set for logged in patients
     const finalApp = {
       ...newApp,
       patient: user.role === "pasien" ? user.name : newApp.patient
     };
 
-    // Always read latest from storage to prevent overwriting
-    const currentApps = JSON.parse(localStorage.getItem("asident_appointments") || "[]");
-    let updated: Appointment[];
-
-    if (editingId) {
-      updated = currentApps.map((app: any) => 
-        app.id === editingId ? { ...app, ...finalApp } : app
-      );
-    } else {
-      const id = Date.now() + Math.floor(Math.random() * 1000);
-      updated = [...currentApps, { id, ...finalApp }];
+    try {
+      if (editingId) {
+        await updateDoc(doc(db, "appointments", editingId), finalApp);
+      } else {
+        await addDoc(collection(db, "appointments"), finalApp);
+      }
+      closeModal();
+    } catch (error) {
+      console.error("Error saving appointment:", error);
+      alert("Gagal menyimpan janji temu. Silakan coba lagi.");
     }
-    
-    saveToStorage(updated);
-    closeModal();
   };
 
   const closeModal = () => {
@@ -144,10 +146,13 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
     setShowModal(true);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus janji temu ini?")) {
-      const updated = appointments.filter(app => app.id !== id);
-      saveToStorage(updated);
+      try {
+        await deleteDoc(doc(db, "appointments", id));
+      } catch (error) {
+        console.error("Error deleting appointment:", error);
+      }
     }
   };
 
@@ -264,7 +269,7 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
       </header>
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {displayAppointments.length > 0 ? displayAppointments.map((app, i) => (
+        {appointments.length > 0 ? appointments.map((app, i) => (
           <motion.div 
             key={app.id}
             initial={{ opacity: 0, y: 20 }}

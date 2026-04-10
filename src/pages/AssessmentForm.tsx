@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import SignatureCanvas from "react-signature-canvas";
 import { generatePatientSummary } from "../services/gemini";
+import { db, collection, addDoc, getDocs, query, where, doc, updateDoc, onSnapshot } from "../lib/firebase";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -266,108 +267,133 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     }
   };
 
-  const onSubmit = (data: any) => {
-    console.log("Form Data:", data);
-    
-    const assessments = JSON.parse(localStorage.getItem("asident_assessments") || "[]");
-    
-    if (editingId) {
-      // Update existing
-      const updatedAssessments = assessments.map((a: any) => 
-        a.id === editingId ? { ...a, ...data, updatedAt: new Date().toISOString() } : a
-      );
-      localStorage.setItem("asident_assessments", JSON.stringify(updatedAssessments));
-    } else {
-      // Save New Assessment
-      const newAssessment = {
-        id: Date.now() + Math.floor(Math.random() * 1000),
-        ...data,
-        examiner: user.name,
-        createdAt: new Date().toISOString()
-      };
-      localStorage.setItem("asident_assessments", JSON.stringify([newAssessment, ...assessments]));
-    }
+  const onSubmit = async (data: any) => {
+    // Calculate final scores before saving
+    const indexTeeth = data.ohis?.indexTeeth || { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" };
+    const teeth = Object.values(indexTeeth);
+    const dValues = teeth.map(t => Number(data.ohis?.debris?.[t as string] || 0));
+    const cValues = teeth.map(t => Number(data.ohis?.calculus?.[t as string] || 0));
+    const di = dValues.reduce((a, b) => a + b, 0) / 6;
+    const ci = cValues.reduce((a, b) => a + b, 0) / 6;
+    const ohisScore = Number((di + ci).toFixed(2));
 
-    // Clear draft after successful save
-    localStorage.removeItem("asident_assessment_draft");
+    const surfaces = data.plaqueControl?.surfaces || [];
+    const totalPlak = surfaces.filter(Boolean).length;
+    const totalSurfaces = 32 * 4;
+    const plaqueScore = Number(((totalPlak / totalSurfaces) * 100).toFixed(1));
 
-    // Generate Billing
-    const selectedServices = data.billing?.services || [];
-    if (selectedServices.length > 0) {
-      const total = selectedServices.reduce((acc: number, id: string) => {
-        const s = DENTAL_SERVICES.find(x => x.id === id);
-        return acc + (s?.price || 0);
-      }, 0);
+    const finalData = {
+      ...data,
+      ohis: { ...data.ohis, score: ohisScore },
+      plaqueControl: { ...data.plaqueControl, score: plaqueScore }
+    };
 
-      const newBill = {
-        id: Date.now() + Math.floor(Math.random() * 1000) + 1,
-        patient: data.demographics.fullName || "Pasien Umum",
-        date: new Date().toISOString().split('T')[0],
-        services: selectedServices.map((id: string) => DENTAL_SERVICES.find(x => x.id === id)?.name),
-        total,
-        status: "UNPAID"
-      };
-
-      const existingBills = JSON.parse(localStorage.getItem("asident_bills") || "[]");
-      localStorage.setItem("asident_bills", JSON.stringify([newBill, ...existingBills]));
-    }
-
-    // Sync with Appointments if next visit is scheduled
-    if (data.nextVisit?.date) {
-      const existingApps = JSON.parse(localStorage.getItem("asident_appointments") || "[]");
-      const nextVisitApp = {
-        id: Date.now() + Math.floor(Math.random() * 1000) + 2,
-        patient: data.demographics.fullName || "Pasien Umum",
-        date: data.nextVisit.date,
-        time: data.nextVisit.time || "09:00",
-        type: "Kontrol Pasca Perawatan",
-        status: "CONFIRMED"
-      };
-      
-      // Check if already exists for this date/patient to avoid duplicates
-      const isDuplicate = existingApps.some((a: any) => 
-        a.patient === nextVisitApp.patient && a.date === nextVisitApp.date
-      );
-      
-      if (!isDuplicate) {
-        localStorage.setItem("asident_appointments", JSON.stringify([...existingApps, nextVisitApp]));
+    try {
+      if (editingId) {
+        // Update existing
+        await updateDoc(doc(db, "assessments", editingId.toString()), {
+          ...finalData,
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        // Save New Assessment
+        await addDoc(collection(db, "assessments"), {
+          ...finalData,
+          examiner: user.name,
+          createdAt: new Date().toISOString()
+        });
       }
-    }
 
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ["#2563eb", "#10b981", "#6366f1"]
-    });
-    setTimeout(() => {
-      navigate("/");
-    }, 2000);
+      // Clear draft after successful save
+      localStorage.removeItem("asident_assessment_draft");
+
+      // Generate Billing
+      const selectedServices = data.billing?.services || [];
+      if (selectedServices.length > 0) {
+        const total = selectedServices.reduce((acc: number, id: string) => {
+          const s = DENTAL_SERVICES.find(x => x.id === id);
+          return acc + (s?.price || 0);
+        }, 0);
+
+        const newBill = {
+          patient: data.demographics.fullName || "Pasien Umum",
+          date: new Date().toISOString().split('T')[0],
+          services: selectedServices.map((id: string) => DENTAL_SERVICES.find(x => x.id === id)?.name),
+          total,
+          status: "UNPAID"
+        };
+
+        await addDoc(collection(db, "bills"), newBill);
+      }
+
+      // Sync with Appointments if next visit is scheduled
+      if (data.nextVisit?.date) {
+        const nextVisitApp = {
+          patient: data.demographics.fullName || "Pasien Umum",
+          date: data.nextVisit.date,
+          time: data.nextVisit.time || "09:00",
+          type: "Kontrol Pasca Perawatan",
+          status: "CONFIRMED"
+        };
+        
+        // Check if already exists for this date/patient to avoid duplicates
+        const q = query(
+          collection(db, "appointments"), 
+          where("patient", "==", nextVisitApp.patient),
+          where("date", "==", nextVisitApp.date)
+        );
+        const existingApps = await getDocs(q);
+        
+        if (existingApps.empty) {
+          await addDoc(collection(db, "appointments"), nextVisitApp);
+        }
+      }
+
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#2563eb", "#10b981", "#6366f1"]
+      });
+      setTimeout(() => {
+        navigate("/");
+      }, 2000);
+    } catch (error) {
+      console.error("Error saving assessment:", error);
+      alert("Gagal menyimpan data. Silakan coba lagi.");
+    }
   };
 
   const nextStep = () => setStep(prev => Math.min(prev + 1, totalSteps));
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
 
-  const handleSearch = (term: string) => {
+  const handleSearch = async (term: string) => {
     setSearchTerm(term);
     if (term.length < 2) {
       setSearchResults([]);
       return;
     }
-    const assessments = JSON.parse(localStorage.getItem("asident_assessments") || "[]");
-    // Get unique patients by name or phone
-    const uniquePatients = assessments.reduce((acc: any[], curr: any) => {
-      if (!curr.demographics) return acc;
-      const exists = acc.find(p => p.demographics?.fullName === curr.demographics?.fullName || p.demographics?.phone === curr.demographics?.phone);
-      if (!exists) acc.push(curr);
-      return acc;
-    }, []);
-
-    const filtered = uniquePatients.filter((p: any) => 
-      (p.demographics?.fullName || "").toLowerCase().includes(term.toLowerCase()) || 
-      (p.demographics?.phone || "").includes(term)
-    );
-    setSearchResults(filtered);
+    
+    try {
+      const assessmentsSnapshot = await getDocs(collection(db, "assessments"));
+      const uniquePatients: any[] = [];
+      
+      assessmentsSnapshot.forEach((doc) => {
+        const p = { id: doc.id, ...doc.data() } as any;
+        if (!p.demographics) return;
+        
+        const exists = uniquePatients.find(up => up.demographics?.fullName === p.demographics?.fullName);
+        if (!exists) {
+          if (p.demographics.fullName.toLowerCase().includes(term.toLowerCase()) || p.demographics.phone.includes(term)) {
+            uniquePatients.push(p);
+          }
+        }
+      });
+      
+      setSearchResults(uniquePatients);
+    } catch (error) {
+      console.error("Search error:", error);
+    }
   };
 
   const selectPatient = (patient: any) => {

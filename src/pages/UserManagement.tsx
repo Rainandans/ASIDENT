@@ -1,44 +1,82 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { UserPlus, Trash2, ShieldCheck, Mail, Search, ChevronLeft, LogOut } from "lucide-react";
+import { UserPlus, Trash2, ShieldCheck, Mail, Search, ChevronLeft, LogOut, Stethoscope } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
+import { db, doc, onSnapshot, setDoc } from "../lib/firebase";
 
 export default function UserManagement({ onLogout }: { onLogout: () => void }) {
   const navigate = useNavigate();
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
+  const [examinerEmails, setExaminerEmails] = useState<string[]>([]);
   const [newEmail, setNewEmail] = useState("");
+  const [newRole, setNewRole] = useState<"admin" | "pemeriksa">("admin");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("asident_admin_emails") || '["rainandanabilatu@gmail.com"]');
-    setAdminEmails(saved);
+    const unsubscribe = onSnapshot(doc(db, "config", "user_management"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setAdminEmails(data.adminEmails || ["rainandanabilatu@gmail.com"]);
+        setExaminerEmails(data.examinerEmails || []);
+      } else {
+        // Initialize with default admin
+        const initial = { adminEmails: ["rainandanabilatu@gmail.com"], examinerEmails: [] };
+        setDoc(doc(db, "config", "user_management"), initial);
+        setAdminEmails(initial.adminEmails);
+        setExaminerEmails(initial.examinerEmails);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
-  const saveAdmins = (emails: string[]) => {
-    setAdminEmails(emails);
-    localStorage.setItem("asident_admin_emails", JSON.stringify(emails));
-  };
-
-  const addAdmin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newEmail && !adminEmails.includes(newEmail)) {
-      const updated = [...adminEmails, newEmail];
-      saveAdmins(updated);
-      setNewEmail("");
+  const saveConfig = async (admins: string[], examiners: string[]) => {
+    try {
+      await setDoc(doc(db, "config", "user_management"), {
+        adminEmails: admins,
+        examinerEmails: examiners
+      });
+    } catch (error) {
+      console.error("Error saving config:", error);
+      alert("Gagal menyimpan konfigurasi.");
     }
   };
 
-  const removeAdmin = (email: string) => {
+  const addUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail) return;
+
+    if (newRole === "admin") {
+      if (!adminEmails.includes(newEmail)) {
+        saveConfig([...adminEmails, newEmail], examinerEmails);
+      }
+    } else {
+      if (!examinerEmails.includes(newEmail)) {
+        saveConfig(adminEmails, [...examinerEmails, newEmail]);
+      }
+    }
+    setNewEmail("");
+  };
+
+  const removeUser = (email: string, role: "admin" | "pemeriksa") => {
     if (email === "rainandanabilatu@gmail.com") {
       alert("Email admin utama tidak dapat dihapus.");
       return;
     }
-    const updated = adminEmails.filter(e => e !== email);
-    saveAdmins(updated);
+
+    if (role === "admin") {
+      saveConfig(adminEmails.filter(e => e !== email), examinerEmails);
+    } else {
+      saveConfig(adminEmails, examinerEmails.filter(e => e !== email));
+    }
   };
 
-  const filteredEmails = adminEmails.filter(e => e.toLowerCase().includes(searchTerm.toLowerCase()));
+  const allUsers = [
+    ...adminEmails.map(email => ({ email, role: "admin" as const })),
+    ...examinerEmails.map(email => ({ email, role: "pemeriksa" as const }))
+  ];
+
+  const filteredUsers = allUsers.filter(u => u.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-slate-50 via-blue-50 to-indigo-100 p-8">
@@ -82,7 +120,7 @@ export default function UserManagement({ onLogout }: { onLogout: () => void }) {
                 <UserPlus className="h-5 w-5 text-blue-600" />
                 Tambah Akses
               </h3>
-              <form onSubmit={addAdmin} className="space-y-4">
+              <form onSubmit={addUser} className="space-y-4">
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-400">Alamat Email</label>
                   <div className="relative">
@@ -96,6 +134,17 @@ export default function UserManagement({ onLogout }: { onLogout: () => void }) {
                       required
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-400">Peran / Role</label>
+                  <select 
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value as any)}
+                    className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-4 text-sm font-bold outline-none focus:border-blue-500 transition-all appearance-none"
+                  >
+                    <option value="admin">Administrator</option>
+                    <option value="pemeriksa">Pemeriksa (Examiner)</option>
+                  </select>
                 </div>
                 <button 
                   type="submit"
@@ -115,7 +164,7 @@ export default function UserManagement({ onLogout }: { onLogout: () => void }) {
           >
             <div className="rounded-[2rem] bg-white p-8 shadow-xl shadow-blue-900/5 border border-white min-h-[500px]">
               <div className="mb-8 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-900">Daftar Admin Terdaftar</h3>
+                <h3 className="text-lg font-bold text-slate-900">Daftar Pengguna Terdaftar</h3>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input 
@@ -129,29 +178,35 @@ export default function UserManagement({ onLogout }: { onLogout: () => void }) {
               </div>
 
               <div className="space-y-3">
-                {filteredEmails.map((email) => (
+                {filteredUsers.map((u) => (
                   <div 
-                    key={email}
+                    key={u.email}
                     className="group flex items-center justify-between rounded-2xl border border-slate-50 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:border-blue-100"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                        {email.charAt(0).toUpperCase()}
+                      <div className={cn(
+                        "h-10 w-10 rounded-xl flex items-center justify-center font-bold",
+                        u.role === "admin" ? "bg-blue-100 text-blue-600" : "bg-indigo-100 text-indigo-600"
+                      )}>
+                        {u.role === "admin" ? <ShieldCheck className="h-5 w-5" /> : <Stethoscope className="h-5 w-5" />}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-900">{email}</p>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-500">Administrator</p>
+                        <p className="text-sm font-bold text-slate-900">{u.email}</p>
+                        <p className={cn(
+                          "text-[10px] font-black uppercase tracking-widest",
+                          u.role === "admin" ? "text-blue-500" : "text-indigo-500"
+                        )}>{u.role === "admin" ? "Administrator" : "Pemeriksa"}</p>
                       </div>
                     </div>
                     <button 
-                      onClick={() => removeAdmin(email)}
+                      onClick={() => removeUser(u.email, u.role)}
                       className="rounded-xl p-2 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
                     >
                       <Trash2 className="h-5 w-5" />
                     </button>
                   </div>
                 ))}
-                {filteredEmails.length === 0 && (
+                {filteredUsers.length === 0 && (
                   <div className="py-20 text-center">
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
                       <Mail className="h-8 w-8" />

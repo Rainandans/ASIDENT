@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
+import { db, collection, onSnapshot, doc, deleteDoc } from "../lib/firebase";
 import { 
   LineChart, 
   Line, 
@@ -36,29 +37,59 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
   const [selectedPatientHistory, setSelectedPatientHistory] = useState<any[] | null>(null);
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("asident_assessments") || "[]");
-    // Deduplicate by ID to prevent React key warnings
-    const unique = saved.filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i);
-    setAssessments(unique);
+    const unsubscribe = onSnapshot(collection(db, "assessments"), (snapshot) => {
+      const data: any[] = [];
+      snapshot.forEach((doc) => {
+        data.push({ id: doc.id, ...doc.data() });
+      });
+      // Sort by createdAt descending
+      data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setAssessments(data);
+    });
+    return () => unsubscribe();
   }, []);
 
   const showProgress = (fullName: string, phone: string) => {
     const history = assessments
       .filter(a => a.demographics?.fullName === fullName && a.demographics?.phone === phone)
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-      .map(a => ({
-        date: new Date(a.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
-        ohis: a.ohis?.score || 0,
-        plaque: a.plaqueControl?.score || 0,
-      }));
+      .map(a => {
+        // Fallback calculation if score is missing
+        let ohisScore = a.ohis?.score;
+        if (ohisScore === undefined && a.ohis?.debris && a.ohis?.calculus) {
+          const indexTeeth = a.ohis.indexTeeth || { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" };
+          const teeth = Object.values(indexTeeth);
+          const dValues = teeth.map(t => Number(a.ohis.debris[t as string] || 0));
+          const cValues = teeth.map(t => Number(a.ohis.calculus[t as string] || 0));
+          const di = dValues.reduce((a, b) => a + b, 0) / 6;
+          const ci = cValues.reduce((a, b) => a + b, 0) / 6;
+          ohisScore = Number((di + ci).toFixed(2));
+        }
+
+        let plaqueScore = a.plaqueControl?.score;
+        if (plaqueScore === undefined && a.plaqueControl?.surfaces) {
+          const surfaces = a.plaqueControl.surfaces || [];
+          const totalPlak = surfaces.filter(Boolean).length;
+          const totalSurfaces = 32 * 4;
+          plaqueScore = Number(((totalPlak / totalSurfaces) * 100).toFixed(1));
+        }
+
+        return {
+          date: new Date(a.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+          ohis: ohisScore || 0,
+          plaque: plaqueScore || 0,
+        };
+      });
     setSelectedPatientHistory(history);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus data ini?")) {
-      const updated = assessments.filter(a => a.id !== id);
-      setAssessments(updated);
-      localStorage.setItem("asident_assessments", JSON.stringify(updated));
+      try {
+        await deleteDoc(doc(db, "assessments", id));
+      } catch (error) {
+        console.error("Error deleting assessment:", error);
+      }
     }
   };
 
