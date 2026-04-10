@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { UserPlus, Trash2, ShieldCheck, Mail, Search, ChevronLeft } from "lucide-react";
+import { UserPlus, Trash2, ShieldCheck, Mail, Search, ChevronLeft, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
-export default function UserManagement() {
+export default function UserManagement({ onLogout }: { onLogout: () => void }) {
   const navigate = useNavigate();
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [newEmail, setNewEmail] = useState("");
@@ -56,8 +56,17 @@ export default function UserManagement() {
               <p className="text-slate-500 font-medium">Kelola email yang memiliki akses Admin/Pemeriksa</p>
             </div>
           </div>
-          <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
-            <ShieldCheck className="h-6 w-6" />
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={onLogout}
+              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-red-500 shadow-lg shadow-red-900/5 border border-white transition-all hover:bg-red-50 active:scale-90"
+              title="Keluar"
+            >
+              <LogOut className="h-6 w-6" />
+            </button>
+            <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
           </div>
         </div>
 

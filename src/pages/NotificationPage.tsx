@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bell, ChevronLeft, Mail, MessageSquare, Smartphone, Save, CheckCircle2, Printer, Calendar, Clock, User, Info } from "lucide-react";
+import { Bell, ChevronLeft, Mail, MessageSquare, Smartphone, Save, CheckCircle2, Printer, Calendar, Clock, User, Info, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
-export default function NotificationPage() {
+export default function NotificationPage({ onLogout }: { onLogout: () => void }) {
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -106,6 +106,15 @@ export default function NotificationPage() {
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">Notifikasi & Pengingat</h1>
             <p className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] mt-1">Sistem Pengingat Otomatis</p>
           </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={onLogout}
+            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-red-500 shadow-lg shadow-red-900/5 border border-white transition-all hover:bg-red-50 active:scale-90"
+            title="Keluar"
+          >
+            <LogOut className="h-6 w-6" />
+          </button>
         </div>
       </header>
 

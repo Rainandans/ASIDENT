@@ -56,23 +56,23 @@ export default function App() {
             />
             <Route 
               path="/appointments" 
-              element={user ? <AppointmentPage user={user} /> : <Navigate to="/login" />} 
+              element={user ? <AppointmentPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} 
             />
             <Route 
               path="/education" 
-              element={user ? <EducationPage /> : <Navigate to="/login" />} 
+              element={user ? <EducationPage onLogout={handleLogout} /> : <Navigate to="/login" />} 
             />
             <Route 
               path="/billing" 
-              element={user && (user.role === "admin" || user.role === "pemeriksa") ? <BillingPage /> : <Navigate to="/" />} 
+              element={user && (user.role === "admin" || user.role === "pemeriksa") ? <BillingPage onLogout={handleLogout} /> : <Navigate to="/" />} 
             />
             <Route 
               path="/notifications" 
-              element={user ? <NotificationPage /> : <Navigate to="/login" />} 
+              element={user ? <NotificationPage onLogout={handleLogout} /> : <Navigate to="/login" />} 
             />
             <Route 
               path="/users" 
-              element={user && user.role === "admin" ? <UserManagement /> : <Navigate to="/" />} 
+              element={user && user.role === "admin" ? <UserManagement onLogout={handleLogout} /> : <Navigate to="/" />} 
             />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

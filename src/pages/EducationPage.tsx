@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { BookOpen, ChevronLeft, PlayCircle, FileText, Filter, X } from "lucide-react";
+import { BookOpen, ChevronLeft, PlayCircle, FileText, Filter, X, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
-export default function EducationPage() {
+export default function EducationPage({ onLogout }: { onLogout: () => void }) {
   const navigate = useNavigate();
   const [filter, setFilter] = useState("Semua");
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
@@ -77,6 +77,13 @@ export default function EducationPage() {
           </button>
           <h1 className="text-2xl font-bold text-slate-900">Edukasi Kesehatan Gigi</h1>
         </div>
+        <button 
+          onClick={onLogout}
+          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-red-500 shadow-lg shadow-red-900/5 border border-white transition-all hover:bg-red-50 active:scale-90"
+          title="Keluar"
+        >
+          <LogOut className="h-6 w-6" />
+        </button>
       </header>
 
       <div className="mb-8 flex flex-wrap items-center gap-4">

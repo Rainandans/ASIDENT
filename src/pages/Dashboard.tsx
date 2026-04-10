@@ -224,6 +224,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </div>
 
           <div className="flex items-center gap-6">
+            <button 
+              onClick={onLogout}
+              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-red-500 border border-red-100 hover:bg-red-100 transition-all shadow-sm group"
+              title="Keluar"
+            >
+              <LogOut className="h-5 w-5 group-hover:scale-110 transition-transform" />
+            </button>
             <button className="relative rounded-2xl bg-white/50 border border-white p-2.5 text-slate-500 hover:bg-white hover:text-blue-600 transition-all shadow-sm group">
               <Bell className="h-5 w-5 group-hover:shake" />
               <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white animate-pulse"></span>

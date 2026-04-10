@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Calendar, ChevronLeft, Plus, X, CheckCircle2, Edit3, Trash2, Printer, Search, Clock, User, Stethoscope, ShieldCheck } from "lucide-react";
+import { Calendar, ChevronLeft, Plus, X, CheckCircle2, Edit3, Trash2, Printer, Search, Clock, User, Stethoscope, ShieldCheck, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
@@ -13,7 +13,7 @@ interface Appointment {
   status: "PENDING" | "CONFIRMED" | "CANCELLED";
 }
 
-export default function AppointmentPage({ user }: { user: { name: string; role: string } }) {
+export default function AppointmentPage({ user, onLogout }: { user: { name: string; role: string }, onLogout: () => void }) {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [isExistingPatient, setIsExistingPatient] = useState(user.role !== "pasien");
@@ -23,26 +23,31 @@ export default function AppointmentPage({ user }: { user: { name: string; role: 
   
   // Load appointments from localStorage
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("asident_appointments") || "[]");
-    // Deduplicate by ID
-    const unique = saved.filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i);
-    
-    if (unique.length === 0 && user.role !== "pasien") {
-      // Default mock data if empty and not a patient
-      const initial = [
-        { id: 1, patient: "Ali Hamzah", date: "2026-04-10", time: "09:00", type: "Scaling", status: "CONFIRMED" },
-        { id: 2, patient: "Siti Aminah", date: "2026-04-10", time: "10:30", type: "Konsultasi", status: "CONFIRMED" },
-      ];
-      setAppointments(initial as Appointment[]);
-      localStorage.setItem("asident_appointments", JSON.stringify(initial));
-    } else {
-      setAppointments(unique);
-    }
-  }, [user.role]);
+    const loadAppointments = () => {
+      const saved = JSON.parse(localStorage.getItem("asident_appointments") || "[]");
+      const unique = saved.filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i);
+      
+      if (unique.length === 0) {
+        const initial = [
+          { id: 1, patient: "Ali Hamzah", date: "2026-04-10", time: "09:00", type: "Scaling", status: "CONFIRMED" },
+          { id: 2, patient: "Siti Aminah", date: "2026-04-10", time: "10:30", type: "Konsultasi", status: "CONFIRMED" },
+        ];
+        setAppointments(initial as Appointment[]);
+        localStorage.setItem("asident_appointments", JSON.stringify(initial));
+      } else {
+        setAppointments(unique);
+      }
+    };
 
-  // Filter appointments based on role
-  const displayAppointments = user.role === "pasien" 
-    ? appointments.filter(app => app.patient === user.name)
+    loadAppointments();
+    // Listen for storage changes in other tabs
+    window.addEventListener('storage', loadAppointments);
+    return () => window.removeEventListener('storage', loadAppointments);
+  }, [user.role, user.name]);
+
+  // Filter appointments based on role (case-insensitive)
+  const displayAppointments = user.role.toLowerCase() === "pasien" 
+    ? appointments.filter(app => app.patient.toLowerCase() === user.name.toLowerCase())
     : appointments;
 
   // Save appointments to localStorage
@@ -213,16 +218,31 @@ export default function AppointmentPage({ user }: { user: { name: string; role: 
           </button>
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">Jadwal Janji Temu</h1>
-            <p className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] mt-1">Manajemen Kunjungan Pasien</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">Manajemen Kunjungan Pasien</p>
+              <span className="h-1 w-1 rounded-full bg-slate-300"></span>
+              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em]">Akses: {user.role}</p>
+            </div>
           </div>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="group flex items-center gap-3 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-700 px-10 py-5 font-black text-white shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-95"
-        >
-          <Plus className="h-6 w-6 group-hover:rotate-90 transition-transform duration-500" />
-          BUAT JANJI BARU
-        </button>
+        
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setShowModal(true)}
+            className="group flex items-center gap-3 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-700 px-10 py-5 font-black text-white shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-95"
+          >
+            <Plus className="h-6 w-6 group-hover:rotate-90 transition-transform duration-500" />
+            BUAT JANJI BARU
+          </button>
+          
+          <button 
+            onClick={onLogout}
+            className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-red-500 shadow-lg shadow-red-900/5 border border-white transition-all hover:bg-red-50 active:scale-90"
+            title="Keluar"
+          >
+            <LogOut className="h-6 w-6" />
+          </button>
+        </div>
       </header>
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
