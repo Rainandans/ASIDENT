@@ -102,6 +102,7 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
   
   const handleAddAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("handleAddAppointment triggered", { uid: user.uid, date: newApp.date, time: newApp.time });
     
     // Final validation before saving
     if (!user.uid) {
@@ -427,13 +428,13 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={closeModal}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              className="absolute inset-0 z-0 bg-slate-900/60 backdrop-blur-md"
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg overflow-hidden rounded-[3rem] bg-white shadow-2xl"
+              className="relative z-10 w-full max-w-lg overflow-hidden rounded-[3rem] bg-white shadow-2xl"
             >
               <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-10 text-white">
                 <div className="flex items-center justify-between">
@@ -448,6 +449,13 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
               </div>
 
               <form onSubmit={handleAddAppointment} className="p-10 space-y-8">
+                {!user.uid && (
+                  <div className="rounded-2xl bg-red-50 p-4 border border-red-100">
+                    <p className="text-[10px] font-black text-red-600 uppercase tracking-widest leading-relaxed">
+                      ⚠️ Sesi login tidak valid. Silakan Logout dan Login kembali agar dapat menyimpan janji temu.
+                    </p>
+                  </div>
+                )}
                 {/* Patient Type Toggle - Only for Admin */}
                 {user.role !== "pasien" && (
                   <div className="flex rounded-2xl bg-slate-100 p-1.5">
@@ -605,9 +613,13 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
                 </div>
 
                 <button 
-                  type="submit"
+                  type="button"
+                  onClick={(e) => {
+                    console.log("Konfirmasi button clicked!");
+                    handleAddAppointment(e as any);
+                  }}
                   disabled={isSaving}
-                  className="mt-4 flex w-full items-center justify-center gap-3 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-700 py-6 text-sm font-black text-white shadow-2xl shadow-blue-500/30 transition-all hover:shadow-blue-500/50 active:scale-95 uppercase tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative z-50 mt-4 flex w-full cursor-pointer items-center justify-center gap-3 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-700 py-6 text-sm font-black text-white shadow-2xl shadow-blue-500/30 transition-all hover:shadow-blue-500/50 active:scale-95 uppercase tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
                 >
                   {isSaving ? (
                     <RefreshCw className="h-6 w-6 animate-spin" />
