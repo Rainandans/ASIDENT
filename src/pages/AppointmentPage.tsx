@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Calendar, ChevronLeft, Plus, X, CheckCircle2, Edit3, Trash2, Printer, Search, Clock, User, Stethoscope, ShieldCheck, LogOut } from "lucide-react";
+import { Calendar, ChevronLeft, Plus, X, CheckCircle2, Edit3, Trash2, Printer, Search, Clock, User, Stethoscope, ShieldCheck, LogOut, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
@@ -20,25 +20,28 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Load appointments from localStorage
-  useEffect(() => {
-    const loadAppointments = () => {
-      const saved = JSON.parse(localStorage.getItem("asident_appointments") || "[]");
-      const unique = saved.filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i);
-      
-      if (unique.length === 0) {
-        const initial = [
-          { id: 1, patient: "Ali Hamzah", date: "2026-04-10", time: "09:00", type: "Scaling", status: "CONFIRMED" },
-          { id: 2, patient: "Siti Aminah", date: "2026-04-10", time: "10:30", type: "Konsultasi", status: "CONFIRMED" },
-        ];
-        setAppointments(initial as Appointment[]);
-        localStorage.setItem("asident_appointments", JSON.stringify(initial));
-      } else {
-        setAppointments(unique);
-      }
-    };
+  const loadAppointments = () => {
+    setIsRefreshing(true);
+    const saved = localStorage.getItem("asident_appointments");
+    if (!saved) {
+      const initial = [
+        { id: 1, patient: "Ali Hamzah", date: "2026-04-10", time: "09:00", type: "Scaling", status: "CONFIRMED" },
+        { id: 2, patient: "Siti Aminah", date: "2026-04-10", time: "10:30", type: "Konsultasi", status: "CONFIRMED" },
+      ];
+      localStorage.setItem("asident_appointments", JSON.stringify(initial));
+      setAppointments(initial as Appointment[]);
+    } else {
+      const parsed = JSON.parse(saved);
+      const unique = parsed.filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i);
+      setAppointments(unique);
+    }
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
 
+  useEffect(() => {
     loadAppointments();
     // Listen for storage changes in other tabs
     window.addEventListener('storage', loadAppointments);
@@ -97,16 +100,20 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
       patient: user.role === "pasien" ? user.name : newApp.patient
     };
 
+    // Always read latest from storage to prevent overwriting
+    const currentApps = JSON.parse(localStorage.getItem("asident_appointments") || "[]");
+    let updated: Appointment[];
+
     if (editingId) {
-      const updated = appointments.map(app => 
+      updated = currentApps.map((app: any) => 
         app.id === editingId ? { ...app, ...finalApp } : app
       );
-      saveToStorage(updated);
     } else {
       const id = Date.now() + Math.floor(Math.random() * 1000);
-      const updated = [...appointments, { id, ...finalApp }];
-      saveToStorage(updated);
+      updated = [...currentApps, { id, ...finalApp }];
     }
+    
+    saveToStorage(updated);
     closeModal();
   };
 
@@ -227,6 +234,17 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
         </div>
         
         <div className="flex items-center gap-4">
+          <button 
+            onClick={loadAppointments}
+            className={cn(
+              "flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-lg shadow-blue-900/5 border border-white transition-all hover:bg-blue-50 active:scale-90",
+              isRefreshing && "animate-spin"
+            )}
+            title="Segarkan Data"
+          >
+            <RefreshCw className="h-6 w-6" />
+          </button>
+
           <button 
             onClick={() => setShowModal(true)}
             className="group flex items-center gap-3 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-700 px-10 py-5 font-black text-white shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-95"

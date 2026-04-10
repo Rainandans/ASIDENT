@@ -312,6 +312,28 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       localStorage.setItem("asident_bills", JSON.stringify([newBill, ...existingBills]));
     }
 
+    // Sync with Appointments if next visit is scheduled
+    if (data.nextVisit?.date) {
+      const existingApps = JSON.parse(localStorage.getItem("asident_appointments") || "[]");
+      const nextVisitApp = {
+        id: Date.now() + Math.floor(Math.random() * 1000) + 2,
+        patient: data.demographics.fullName || "Pasien Umum",
+        date: data.nextVisit.date,
+        time: data.nextVisit.time || "09:00",
+        type: "Kontrol Pasca Perawatan",
+        status: "CONFIRMED"
+      };
+      
+      // Check if already exists for this date/patient to avoid duplicates
+      const isDuplicate = existingApps.some((a: any) => 
+        a.patient === nextVisitApp.patient && a.date === nextVisitApp.date
+      );
+      
+      if (!isDuplicate) {
+        localStorage.setItem("asident_appointments", JSON.stringify([...existingApps, nextVisitApp]));
+      }
+    }
+
     confetti({
       particleCount: 150,
       spread: 70,
