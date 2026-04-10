@@ -98,6 +98,8 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
     status: user.role === "pasien" ? "PENDING" : "CONFIRMED"
   });
 
+  const [isSaving, setIsSaving] = useState(false);
+  
   const handleAddAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -107,6 +109,18 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
       alert("Sesi login Anda tidak valid (UID hilang). Silakan logout dan login kembali.");
       return;
     }
+
+    if (!newApp.date || !newApp.time) {
+      alert("Mohon pilih tanggal dan waktu kunjungan.");
+      return;
+    }
+
+    if (user.role !== "pasien" && !newApp.patient) {
+      alert("Mohon pilih atau masukkan nama pasien.");
+      return;
+    }
+
+    setIsSaving(true);
 
     const finalApp = {
       patient: user.role === "pasien" ? user.name : newApp.patient,
@@ -120,14 +134,7 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
       createdByRole: user.role
     };
 
-    // Basic validation
-    if (!finalApp.patient || !finalApp.date || !finalApp.time) {
-      alert("Mohon lengkapi semua data janji temu.");
-      return;
-    }
-
     console.log("Attempting to save appointment:", finalApp);
-    console.log("Current Firebase User:", auth.currentUser?.uid);
 
     try {
       if (editingId) {
@@ -162,6 +169,8 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
       } else {
         alert(`Gagal menyimpan janji temu: ${error.message || "Terjadi kesalahan sistem"}`);
       }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -597,11 +606,15 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
 
                 <button 
                   type="submit"
-                  disabled={(user.role !== "pasien" && !newApp.patient) || !newApp.date || !newApp.time}
+                  disabled={isSaving}
                   className="mt-4 flex w-full items-center justify-center gap-3 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-700 py-6 text-sm font-black text-white shadow-2xl shadow-blue-500/30 transition-all hover:shadow-blue-500/50 active:scale-95 uppercase tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <CheckCircle2 className="h-6 w-6" />
-                  {editingId ? "SIMPAN PERUBAHAN" : "KONFIRMASI JANJI TEMU"}
+                  {isSaving ? (
+                    <RefreshCw className="h-6 w-6 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-6 w-6" />
+                  )}
+                  {isSaving ? "MENYIMPAN..." : (editingId ? "SIMPAN PERUBAHAN" : "KONFIRMASI JANJI TEMU")}
                 </button>
               </form>
             </motion.div>

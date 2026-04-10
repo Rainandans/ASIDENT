@@ -40,7 +40,7 @@ import {
 } from "recharts";
 
 interface DashboardProps {
-  user: { name: string; role: string; email?: string };
+  user: { name: string; role: string; email?: string; uid?: string };
   onLogout: () => void;
 }
 

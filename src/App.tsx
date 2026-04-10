@@ -13,7 +13,7 @@ import { AnimatePresence } from "motion/react";
 import { auth, db, doc, getDoc, onSnapshot } from "./lib/firebase";
 
 export default function App() {
-  const [user, setUser] = useState<{ name: string; role: string; email?: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string; email?: string; uid?: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

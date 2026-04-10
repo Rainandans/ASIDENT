@@ -5,7 +5,7 @@ import { cn } from "../lib/utils";
 import { auth, googleProvider, signInWithPopup, db, doc, getDoc, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "../lib/firebase";
 
 interface LoginPageProps {
-  onLogin: (name: string, role: string, email?: string) => void;
+  onLogin: (name: string, role: string, email?: string, uid?: string) => void;
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
@@ -60,7 +60,15 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       onLogin(user.displayName || user.email?.split('@')[0] || "User", role, user.email || "", user.uid);
     } catch (err: any) {
       console.error("Login error:", err);
-      setError("Gagal masuk dengan Google. Silakan coba lagi.");
+      if (err.code === 'auth/popup-blocked') {
+        setError("Popup diblokir oleh browser. Silakan izinkan popup untuk login dengan Google.");
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        setError("Login dibatalkan.");
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError("Domain ini belum diizinkan di Firebase Console. Silakan hubungi Admin.");
+      } else {
+        setError(`Gagal masuk dengan Google: ${err.message || "Silakan coba lagi"}`);
+      }
     } finally {
       setIsLoading(false);
     }
