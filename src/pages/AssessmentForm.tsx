@@ -36,7 +36,7 @@ import { HUMAN_NEEDS, TOOTH_CONDITIONS, DENTAL_SERVICES } from "../constants";
 import confetti from "canvas-confetti";
 
 interface AssessmentFormProps {
-  user: { name: string; role: string };
+  user: { name: string; role: string; uid?: string; email?: string };
   onLogout?: () => void;
 }
 
@@ -267,7 +267,25 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     }
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const sanitizeData = (obj: any): any => {
+    if (obj === null || typeof obj !== "object") return obj;
+    if (Array.isArray(obj)) return obj.map(sanitizeData);
+    
+    return Object.fromEntries(
+      Object.entries(obj)
+        .filter(([_, v]) => v !== undefined && typeof v !== 'function')
+        .map(([k, v]) => [k, sanitizeData(v)])
+    );
+  };
+
   const onSubmit = async (data: any) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    console.log("Saving assessment started...", { user: user.name, role: user.role, isEditing: !!editingId });
+    
     // Calculate final scores before saving
     const indexTeeth = data.ohis?.indexTeeth || { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" };
     const teeth = Object.values(indexTeeth);
@@ -282,26 +300,32 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     const totalSurfaces = 32 * 4;
     const plaqueScore = Number(((totalPlak / totalSurfaces) * 100).toFixed(1));
 
-    const finalData = {
+    const finalData = sanitizeData({
       ...data,
       ohis: { ...data.ohis, score: ohisScore },
-      plaqueControl: { ...data.plaqueControl, score: plaqueScore }
-    };
+      plaqueControl: { ...data.plaqueControl, score: plaqueScore },
+      examinerName: user.name,
+      examinerUid: user.uid,
+      examinerRole: user.role
+    });
 
     try {
       if (editingId) {
         // Update existing
+        console.log("Updating assessment:", editingId);
         await updateDoc(doc(db, "assessments", editingId.toString()), {
           ...finalData,
           updatedAt: new Date().toISOString()
         });
       } else {
         // Save New Assessment
-        await addDoc(collection(db, "assessments"), {
+        console.log("Creating new assessment document...");
+        const docRef = await addDoc(collection(db, "assessments"), {
           ...finalData,
           examiner: user.name,
           createdAt: new Date().toISOString()
         });
+        console.log("Assessment saved successfully with ID:", docRef.id);
       }
 
       // Clear draft after successful save
@@ -310,31 +334,43 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       // Generate Billing
       const selectedServices = data.billing?.services || [];
       if (selectedServices.length > 0) {
+        console.log("Creating billing record...");
         const total = selectedServices.reduce((acc: number, id: string) => {
           const s = DENTAL_SERVICES.find(x => x.id === id);
           return acc + (s?.price || 0);
         }, 0);
 
-        const newBill = {
+        const newBill = sanitizeData({
           patient: data.demographics.fullName || "Pasien Umum",
-          date: new Date().toISOString().split('T')[0],
+          date: new Date().toISOString().split("T")[0],
           services: selectedServices.map((id: string) => DENTAL_SERVICES.find(x => x.id === id)?.name),
           total,
-          status: "UNPAID"
-        };
+          status: "UNPAID",
+          patientPhone: data.demographics.phone || "",
+          createdAt: new Date().toISOString(),
+          createdBy: user.uid,
+          createdByRole: user.role
+        });
 
         await addDoc(collection(db, "bills"), newBill);
+        console.log("Billing saved.");
       }
 
       // Sync with Appointments if next visit is scheduled
       if (data.nextVisit?.date) {
-        const nextVisitApp = {
+        console.log("Scheduling follow-up appointment...");
+        const nextVisitApp = sanitizeData({
           patient: data.demographics.fullName || "Pasien Umum",
           date: data.nextVisit.date,
           time: data.nextVisit.time || "09:00",
           type: "Kontrol Pasca Perawatan",
-          status: "CONFIRMED"
-        };
+          status: "CONFIRMED",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          createdBy: user.uid,
+          createdByRole: user.role,
+          notes: data.nextVisit.notes || ""
+        });
         
         // Check if already exists for this date/patient to avoid duplicates
         const q = query(
@@ -346,6 +382,9 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         
         if (existingApps.empty) {
           await addDoc(collection(db, "appointments"), nextVisitApp);
+          console.log("Appointment saved.");
+        } else {
+          console.log("Appointment already exists for this date, skipping.");
         }
       }
 
@@ -355,12 +394,17 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         origin: { y: 0.6 },
         colors: ["#2563eb", "#10b981", "#6366f1"]
       });
+      
+      alert("Data berhasil disimpan ke database!");
+      
       setTimeout(() => {
         navigate("/");
-      }, 2000);
-    } catch (error) {
-      console.error("Error saving assessment:", error);
-      alert("Gagal menyimpan data. Silakan coba lagi.");
+      }, 1000);
+    } catch (error: any) {
+      console.error("CRITICAL ERROR saving assessment:", error);
+      alert(`Gagal menyimpan data: ${error.message || "Unknown error"}. Mohon hubungi admin.`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1839,6 +1883,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
               ) : (
                 <button 
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => {
                     if (watch("informedConsent.agreed")) {
                       handleSubmit(onSubmit)();
@@ -1846,10 +1891,19 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                       alert("Harap setujui Informed Consent terlebih dahulu.");
                     }
                   }}
-                  className="flex items-center gap-2 rounded-xl bg-emerald-500 px-8 py-3 font-bold text-white shadow-lg shadow-emerald-200 hover:bg-emerald-600 transition-all"
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl px-8 py-3 font-bold text-white shadow-lg transition-all",
+                    isSubmitting 
+                      ? "bg-slate-400 cursor-not-allowed" 
+                      : "bg-emerald-500 shadow-emerald-200 hover:bg-emerald-600 active:scale-95"
+                  )}
                 >
-                  <Save className="h-5 w-5" />
-                  SIMPAN DATA
+                  {isSubmitting ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Save className="h-5 w-5" />
+                  )}
+                  {isSubmitting ? "MENYIMPAN..." : "SIMPAN DATA"}
                 </button>
               )}
             </div>

@@ -37,14 +37,22 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
   const [selectedPatient, setSelectedPatient] = useState<{ fullName: string; phone: string } | null>(null);
 
   useEffect(() => {
+    console.log("PatientDatabase: Fetching assessments...");
     const unsubscribe = onSnapshot(collection(db, "assessments"), (snapshot) => {
+      console.log(`PatientDatabase: Received snapshot with ${snapshot.size} documents.`);
       const data: any[] = [];
       snapshot.forEach((doc) => {
         data.push({ id: doc.id, ...doc.data() });
       });
       // Sort by createdAt descending
-      data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      data.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
       setAssessments(data);
+    }, (error) => {
+      console.error("PatientDatabase: Snapshot error:", error);
     });
     return () => unsubscribe();
   }, []);

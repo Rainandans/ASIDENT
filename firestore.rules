@@ -79,16 +79,16 @@ service cloud.firestore {
     // ===============================================================
 
     match /assessments/{assessmentId} {
-      allow read: if isAuthenticated();
-      allow create: if isExaminer();
-      allow update: if isExaminer();
-      allow delete: if isAdmin();
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+      allow delete: if request.auth != null && (
+        request.auth.token.email == "rainandanabilatu@gmail.com" ||
+        get(/databases/$(database)/documents/config/user_management).data.adminEmails.hasAny([request.auth.token.email])
+      );
     }
 
     match /appointments/{appointmentId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+      allow read, create, update: if request.auth != null;
       allow delete: if request.auth != null && (
         request.auth.token.email == "rainandanabilatu@gmail.com" ||
         get(/databases/$(database)/documents/config/user_management).data.adminEmails.hasAny([request.auth.token.email])
@@ -96,10 +96,12 @@ service cloud.firestore {
     }
 
     match /bills/{billId} {
-      allow read: if isAuthenticated();
-      allow create: if isExaminer();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+      allow delete: if request.auth != null && (
+        request.auth.token.email == "rainandanabilatu@gmail.com" ||
+        get(/databases/$(database)/documents/config/user_management).data.adminEmails.hasAny([request.auth.token.email])
+      );
     }
 
     match /config/user_management {
