@@ -272,7 +272,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                 <h3 className="text-xl font-bold text-slate-900">Database Kosong</h3>
                 <p className="max-w-xs text-slate-500">Belum ada data pasien yang tersimpan. Silakan lakukan pemeriksaan baru untuk mengisi database.</p>
                 <button 
-                  onClick={() => navigate("/assessment")}
+                  onClick={() => navigate("/assessment", { state: { resetForm: true } })}
                   className="mt-8 rounded-2xl bg-blue-600 px-8 py-4 font-black text-white shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all uppercase tracking-widest text-xs"
                 >
                   Mulai Pemeriksaan Baru

@@ -236,6 +236,11 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       } else {
         selectPatient(location.state.patientData);
       }
+    } else if (location.state?.resetForm) {
+      console.log("Resetting form for new patient...");
+      localStorage.removeItem("asident_assessment_draft");
+      setEditingId(null);
+      reset(); // Resets to defaultValues
     } else {
       // Load draft if exists
       const draft = localStorage.getItem("asident_assessment_draft");
@@ -441,10 +446,13 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
   };
 
   const selectPatient = (patient: any) => {
-    // Fill demographics
+    // Fill demographics and history
     setValue("demographics", patient.demographics);
+    if (patient.healthHistory) {
+      setValue("healthHistory", patient.healthHistory);
+    }
     
-    // Reset clinical fields for new visit
+    // Reset clinical fields for new visit (Pemeriksaan Objektif)
     setEditingId(null);
     setValue("header.visitDate", new Date().toISOString().split('T')[0]);
     setValue("vitals", { bp: "", pulse: "", resp: "" });
@@ -473,7 +481,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     setValue("diagnosis", []);
     setValue("billing", { services: [], total: 0, status: "PENDING" });
     setValue("informedConsent", { 
-      patient: { name: patient.demographics.fullName, age: patient.demographics.age, address: patient.demographics.address },
+      patient: { name: patient.demographics?.fullName || "", age: patient.demographics?.age || "", address: patient.demographics?.address || "" },
       guardian: { name: "", age: "", address: "" },
       agreed: false, 
       witness: "",
@@ -513,9 +521,25 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
               <ChevronLeft className="h-6 w-6" />
             </button>
             <div>
-              <h1 className="text-xl font-black text-slate-900 tracking-tight">
-                {editingId ? "Edit Rekam Medis" : "Pemeriksaan Baru"}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                  {editingId ? "Edit Rekam Medis" : "Pemeriksaan Baru"}
+                </h1>
+                {!editingId && step === 1 && (
+                  <button 
+                    onClick={() => {
+                      if (confirm("Apakah Anda yakin ingin menghapus data yang sedang diisi dan mulai dari awal secara kosong?")) {
+                        localStorage.removeItem("asident_assessment_draft");
+                        reset();
+                      }
+                    }}
+                    className="flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-black text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all"
+                  >
+                    <Plus className="h-3 w-3" />
+                    MULAI BARU
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">ASIDENT • {user.name}</p>
                 {isAutoSaving && !editingId && (

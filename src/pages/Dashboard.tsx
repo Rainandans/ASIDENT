@@ -431,7 +431,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <motion.button
                 key={item.id}
                 whileHover={{ y: -8, scale: 1.02 }}
-                onClick={() => item.path !== "#" && navigate(item.path)}
+                onClick={() => {
+                  if (item.path !== "#") {
+                    navigate(item.path, item.id === "pemeriksaan" ? { state: { resetForm: true } } : undefined);
+                  }
+                }}
                 className="group relative flex flex-col items-start overflow-hidden rounded-[2.5rem] bg-white p-8 text-left shadow-xl shadow-blue-900/5 border border-white transition-all hover:shadow-2xl hover:shadow-blue-900/10"
               >
                 <div className={cn("mb-6 rounded-2xl p-5 text-white shadow-xl transition-transform group-hover:scale-110 duration-500", item.color)}>
