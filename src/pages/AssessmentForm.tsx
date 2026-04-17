@@ -40,6 +40,165 @@ interface AssessmentFormProps {
   onLogout?: () => void;
 }
 
+const INITIAL_FORM_STATE = {
+  header: {
+    studentName: "",
+    nim: "",
+    clientId: "",
+    visitDate: new Date().toISOString().split('T')[0],
+  },
+  demographics: {
+    fullName: "",
+    gender: "L",
+    age: "",
+    birthDate: "",
+    birthPlace: "",
+    religion: "",
+    nationality: "Indonesia",
+    occupation: "",
+    address: "",
+    bloodType: "",
+    status: "",
+    phone: "",
+    dependents: { children: "", others: "" },
+    tribe: "",
+    weight: "",
+    height: "",
+    dentistName: "",
+    dentistPhone: "",
+    dentistAddress: "",
+    doctorName: "",
+    doctorPhone: "",
+    doctorAddress: "",
+    insurance: "",
+    referral: "",
+  },
+  healthHistory: {
+    medical: { 
+      healthy: true, 
+      seriousDisease: "", 
+      bloodClotting: "", 
+      allergies: { food: "", injection: "", meds: "", weather: "", others: "" } 
+    },
+    social: "",
+    pharmacological: { 
+      consuming: false, 
+      meds: "", 
+      sideEffects: "", 
+      positiveEffect: "",
+      doseProblem: false,
+      doseExplanation: "",
+      regular: false 
+    },
+    dental: {
+      reason: "",
+      concerns: { toothDamage: false, gumDisease: false, mouthSores: false, mouthCancer: false },
+      xrayLast2Years: false,
+      xrayType: "",
+      prevExperience: false,
+      prevExperienceExplanation: "",
+      prevClinicOpinion: "",
+      healthAffectsGeneral: "",
+      symptoms: { 
+        sensitive: false, jawPain: false, toothache: false, gumPain: false, 
+        bleeding: false, chewingDifficulty: false, looseFilling: false,
+        dryMouth: false, badBreath: false, burning: false, swelling: false, recedingGums: false
+      },
+      grinding: false,
+      biteGuard: false,
+      appearanceConcern: false,
+      appearanceDetails: { yellow: false, gaps: false, stains: false, gumIssues: false, crowded: false, profile: false },
+      injury: false,
+      injuryExplanation: "",
+      prevProcedures: { 
+        calculus: false, extraction: false, rootCanal: false, gumSurgery: false, braces: false, 
+        radiation: false, jawSurgery: false, headNeckPain: false, bleedingPostOp: false, others: ""
+      },
+      maintenance: { 
+        brushFreq: "",
+        brushTime: { morning: false, bath: false, beforeSleep: false, afterMeal: false },
+        brushType: "Medium",
+        fluoridePaste: "Ya",
+        flossFreq: "Tidak Pernah",
+        mouthwashFreq: "Tidak Pernah",
+        tongueCleaner: false,
+        brushTechnique: "",
+        brushReplacement: "",
+        bleedingWhenBrushing: false,
+        habits: { smoking: false, coffee: false, tea: false, alcohol: false, biting: false, others: "" }
+      },
+      snacks: [
+        { name: "Permen mint", freq: "" },
+        { name: "Minuman manis", freq: "" },
+        { name: "Buah kering", freq: "" },
+        { name: "Minuman kaleng/botol", freq: "" },
+        { name: "Permen karet", freq: "" },
+        { name: "Kerupuk", freq: "" },
+        { name: "Obat syrup", freq: "" },
+        { name: "Keripik", freq: "" },
+        { name: "Kue kering", freq: "" },
+        { name: "Lain-lain", freq: "" },
+      ],
+      beliefs: {
+        cavityRisk: "Sama seperti umumnya",
+        preventionImportance: "Sangat Penting",
+        canMaintain: "Ya",
+        healthStatus: "Baik",
+        generalHealthLink: "Ya",
+        routineCheckImportance: "Sangat Penting",
+        fearLevel: "Tidak Takut"
+      }
+    }
+  },
+  vitals: { bp: "", pulse: "", resp: "" },
+  extraIntraOral: { 
+    extra: { face: "Normal", neck: "Normal", vermilion: "Normal", parotid: "Normal", lymph: "Normal", cervical: "Normal", submental: "Normal", submandibular: "Normal", supraclavicular: "Normal" },
+    intra: { labialMucosa: "Normal", labialVestibule: "Normal", anteriorGingiva: "Normal", buccalVestibule: "Normal", buccalGingiva: "Normal", tongueDorsal: "Normal", tongueVentral: "Normal", tongueLateral: "Normal", tonsils: "Normal", floorMouth: "Normal", lingualGingiva: "Normal", tonsillarPillars: "Normal", pharyngealWall: "Normal", softPalate: "Normal", uvula: "Normal", hardPalate: "Normal", palatalGingiva: "Normal", submandibularGlands: "Normal" },
+    notes: ""
+  },
+  ohis: { 
+    debris: { 16: 0, 11: 0, 26: 0, 36: 0, 31: 0, 46: 0 },
+    calculus: { 16: 0, 11: 0, 26: 0, 36: 0, 31: 0, 46: 0 },
+    indexTeeth: { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" }
+  },
+  plaqueControl: {
+    surfaces: Array(128).fill(false), // 32 teeth * 4 surfaces
+  },
+  odontogram: {} as Record<number, { condition: string; surfaces: string[]; restoration: string; material: string }>,
+  periodontal: {
+    teeth: Array(32).fill(null).map(() => ({
+      bleeding: false,
+      calculus: 0,
+      pocketShallow: false,
+      pocketDeep: false,
+      attachmentLoss: false,
+      extrinsicStains: 0,
+    })),
+  },
+  documentation: {
+    photos: [] as string[],
+  },
+  diagnosis: [] as any[],
+  billing: {
+    services: [] as string[],
+    total: 0,
+    status: "PENDING"
+  },
+  informedConsent: { 
+    patient: { name: "", age: "", address: "" },
+    guardian: { name: "", age: "", address: "" },
+    agreed: false, 
+    witness: "",
+    patientSignature: "",
+    examinerSignature: ""
+  },
+  nextVisit: {
+    date: "",
+    notes: "",
+    recommendation: ""
+  }
+};
+
 export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,164 +214,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
   const totalSteps = 10;
 
   const { register, handleSubmit, watch, setValue, control, reset, formState: { errors } } = useForm({
-    defaultValues: {
-      header: {
-        studentName: "",
-        nim: "",
-        clientId: "",
-        visitDate: new Date().toISOString().split('T')[0],
-      },
-      demographics: {
-        fullName: "",
-        gender: "L",
-        age: "",
-        birthDate: "",
-        birthPlace: "",
-        religion: "",
-        nationality: "Indonesia",
-        occupation: "",
-        address: "",
-        bloodType: "",
-        status: "",
-        phone: "",
-        dependents: { children: "", others: "" },
-        tribe: "",
-        weight: "",
-        height: "",
-        dentistName: "",
-        dentistPhone: "",
-        dentistAddress: "",
-        doctorName: "",
-        doctorPhone: "",
-        doctorAddress: "",
-        insurance: "",
-        referral: "",
-      },
-      healthHistory: {
-        medical: { 
-          healthy: true, 
-          seriousDisease: "", 
-          bloodClotting: "", 
-          allergies: { food: "", injection: "", meds: "", weather: "", others: "" } 
-        },
-        social: "",
-        pharmacological: { 
-          consuming: false, 
-          meds: "", 
-          sideEffects: "", 
-          positiveEffect: "",
-          doseProblem: false,
-          doseExplanation: "",
-          regular: false 
-        },
-        dental: {
-          reason: "",
-          concerns: { toothDamage: false, gumDisease: false, mouthSores: false, mouthCancer: false },
-          xrayLast2Years: false,
-          xrayType: "",
-          prevExperience: false,
-          prevExperienceExplanation: "",
-          prevClinicOpinion: "",
-          healthAffectsGeneral: "",
-          symptoms: { 
-            sensitive: false, jawPain: false, toothache: false, gumPain: false, 
-            bleeding: false, chewingDifficulty: false, looseFilling: false,
-            dryMouth: false, badBreath: false, burning: false, swelling: false, recedingGums: false
-          },
-          grinding: false,
-          biteGuard: false,
-          appearanceConcern: false,
-          appearanceDetails: { yellow: false, gaps: false, stains: false, gumIssues: false, crowded: false, profile: false },
-          injury: false,
-          injuryExplanation: "",
-          prevProcedures: { 
-            calculus: false, extraction: false, rootCanal: false, gumSurgery: false, braces: false, 
-            radiation: false, jawSurgery: false, headNeckPain: false, bleedingPostOp: false, others: ""
-          },
-          maintenance: { 
-            brushFreq: "",
-            brushTime: { morning: false, bath: false, beforeSleep: false, afterMeal: false },
-            brushType: "Medium",
-            fluoridePaste: "Ya",
-            flossFreq: "Tidak Pernah",
-            mouthwashFreq: "Tidak Pernah",
-            tongueCleaner: false,
-            brushTechnique: "",
-            brushReplacement: "",
-            bleedingWhenBrushing: false,
-            habits: { smoking: false, coffee: false, tea: false, alcohol: false, biting: false, others: "" }
-          },
-          snacks: [
-            { name: "Permen mint", freq: "" },
-            { name: "Minuman manis", freq: "" },
-            { name: "Buah kering", freq: "" },
-            { name: "Minuman kaleng/botol", freq: "" },
-            { name: "Permen karet", freq: "" },
-            { name: "Kerupuk", freq: "" },
-            { name: "Obat syrup", freq: "" },
-            { name: "Keripik", freq: "" },
-            { name: "Kue kering", freq: "" },
-            { name: "Lain-lain", freq: "" },
-          ],
-          beliefs: {
-            cavityRisk: "Sama seperti umumnya",
-            preventionImportance: "Sangat Penting",
-            canMaintain: "Ya",
-            healthStatus: "Baik",
-            generalHealthLink: "Ya",
-            routineCheckImportance: "Sangat Penting",
-            fearLevel: "Tidak Takut"
-          }
-        }
-      },
-      vitals: { bp: "", pulse: "", resp: "" },
-      extraIntraOral: { 
-        extra: { face: "Normal", neck: "Normal", vermilion: "Normal", parotid: "Normal", lymph: "Normal", cervical: "Normal", submental: "Normal", submandibular: "Normal", supraclavicular: "Normal" },
-        intra: { labialMucosa: "Normal", labialVestibule: "Normal", anteriorGingiva: "Normal", buccalVestibule: "Normal", buccalGingiva: "Normal", tongueDorsal: "Normal", tongueVentral: "Normal", tongueLateral: "Normal", tonsils: "Normal", floorMouth: "Normal", lingualGingiva: "Normal", tonsillarPillars: "Normal", pharyngealWall: "Normal", softPalate: "Normal", uvula: "Normal", hardPalate: "Normal", palatalGingiva: "Normal", submandibularGlands: "Normal" },
-        notes: ""
-      },
-      ohis: { 
-        debris: { 16: 0, 11: 0, 26: 0, 36: 0, 31: 0, 46: 0 },
-        calculus: { 16: 0, 11: 0, 26: 0, 36: 0, 31: 0, 46: 0 },
-        indexTeeth: { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" }
-      },
-      plaqueControl: {
-        surfaces: Array(128).fill(false), // 32 teeth * 4 surfaces
-      },
-      odontogram: {} as Record<number, { condition: string; surfaces: string[]; restoration: string; material: string }>,
-      periodontal: {
-        teeth: Array(32).fill(null).map(() => ({
-          bleeding: false,
-          calculus: 0,
-          pocketShallow: false,
-          pocketDeep: false,
-          attachmentLoss: false,
-          extrinsicStains: 0,
-        })),
-      },
-      documentation: {
-        photos: [] as string[],
-      },
-      diagnosis: [] as any[],
-      billing: {
-        services: [] as string[],
-        total: 0,
-        status: "PENDING"
-      },
-      informedConsent: { 
-        patient: { name: "", age: "", address: "" },
-        guardian: { name: "", age: "", address: "" },
-        agreed: false, 
-        witness: "",
-        patientSignature: "",
-        examinerSignature: ""
-      },
-      nextVisit: {
-        date: "",
-        notes: "",
-        recommendation: ""
-      }
-    }
+    defaultValues: INITIAL_FORM_STATE
   });
 
   const patientSigRef = useRef<SignatureCanvas>(null);
@@ -240,7 +242,9 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       console.log("Resetting form for new patient...");
       localStorage.removeItem("asident_assessment_draft");
       setEditingId(null);
-      reset(); // Resets to defaultValues
+      reset(INITIAL_FORM_STATE);
+      // Clear state to prevent re-resetting on refreshes
+      navigate(location.pathname, { replace: true, state: {} });
     } else {
       // Load draft if exists
       const draft = localStorage.getItem("asident_assessment_draft");
@@ -530,13 +534,13 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                     onClick={() => {
                       if (confirm("Apakah Anda yakin ingin menghapus data yang sedang diisi dan mulai dari awal secara kosong?")) {
                         localStorage.removeItem("asident_assessment_draft");
-                        reset();
+                        window.location.reload(); // Hard reload for absolute fresh state
                       }
                     }}
-                    className="flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-black text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all"
+                    className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-[10px] font-black text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all border border-slate-200 shadow-sm"
                   >
                     <Plus className="h-3 w-3" />
-                    MULAI BARU
+                    MULAI BARU (KOSONGKAN)
                   </button>
                 )}
               </div>
