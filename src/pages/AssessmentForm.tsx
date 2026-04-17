@@ -229,9 +229,12 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
 
   const formData = watch();
 
+  const isResetting = useRef(false);
+
   // Handle incoming patient data from Database page
   useEffect(() => {
     if (location.state?.patientData) {
+      isResetting.current = false;
       if (location.state.isEditing) {
         setEditingId(location.state.patientData.id);
         reset(location.state.patientData);
@@ -240,22 +243,44 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       }
     } else if (location.state?.resetForm) {
       console.log("Resetting form for new patient...");
+      isResetting.current = true;
       localStorage.removeItem("asident_assessment_draft");
       setEditingId(null);
       reset(INITIAL_FORM_STATE);
-      // Clear state to prevent re-resetting on refreshes
+      setStep(1);
+      setIsExistingPatient(false);
+      setSearchTerm("");
+      setSearchResults([]);
+      setAiSummary("");
+      setActivePeriodontalTooth(null);
+      // Clear state and mark as resetting to skip draft load on next cycle
       navigate(location.pathname, { replace: true, state: {} });
-    } else {
-      // Load draft if exists
+      setTimeout(() => { isResetting.current = false; }, 1000);
+    } else if (!isResetting.current) {
+      // Load draft if exists and not in middle of a reset
       const draft = localStorage.getItem("asident_assessment_draft");
       if (draft && !editingId) {
-        reset(JSON.parse(draft));
+        try {
+          const parsed = JSON.parse(draft);
+          // Only reset if draft actually has content
+          if (parsed.demographics?.fullName || parsed.healthHistory?.dental?.reason) {
+            reset(parsed);
+          }
+        } catch (e) {
+          console.error("Failed to parse draft", e);
+        }
       }
     }
   }, [location.state]);
 
   // Auto-save draft
   useEffect(() => {
+    // Don't save if resetting or form is effectively empty
+    if (isResetting.current) return;
+    if (!formData.demographics?.fullName && !formData.demographics?.phone && !formData.healthHistory?.dental?.reason) {
+      return;
+    }
+
     const timer = setTimeout(() => {
       setIsAutoSaving(true);
       localStorage.setItem("asident_assessment_draft", JSON.stringify(formData));
@@ -533,8 +558,16 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                   <button 
                     onClick={() => {
                       if (confirm("Apakah Anda yakin ingin menghapus data yang sedang diisi dan mulai dari awal secara kosong?")) {
+                        isResetting.current = true;
                         localStorage.removeItem("asident_assessment_draft");
-                        window.location.reload(); // Hard reload for absolute fresh state
+                        reset(INITIAL_FORM_STATE);
+                        setStep(1);
+                        setIsExistingPatient(false);
+                        setSearchTerm("");
+                        setSearchResults([]);
+                        setAiSummary("");
+                        setActivePeriodontalTooth(null);
+                        setTimeout(() => { isResetting.current = false; }, 1000);
                       }
                     }}
                     className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-[10px] font-black text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all border border-slate-200 shadow-sm"
