@@ -27,7 +27,8 @@ import {
   X,
   LogOut,
   Sparkles,
-  Printer
+  Printer,
+  RefreshCw
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -543,9 +544,9 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
   ];
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50 to-indigo-50/50 pb-20">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50 to-indigo-50/50 pb-20 no-print">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-6 py-4">
+      <header className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-6 py-4 no-print">
         <div className="mx-auto max-w-5xl flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
@@ -1338,11 +1339,9 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                           <ToothButton 
                             key={num} 
                             num={num} 
-                            watch={watch} 
-                            setValue={setValue} 
+                            data={formData.odontogram?.[num]} 
                             isActive={activeOdontogramTooth === num}
                             onToggle={() => setActiveOdontogramTooth(activeOdontogramTooth === num ? null : num)}
-                            onClose={() => setActiveOdontogramTooth(null)}
                           />
                         ))}
                       </div>
@@ -1351,12 +1350,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                           <ToothButton 
                             key={num} 
                             num={num} 
-                            watch={watch} 
-                            setValue={setValue} 
+                            data={formData.odontogram?.[num]} 
                             isPrimary 
                             isActive={activeOdontogramTooth === num}
                             onToggle={() => setActiveOdontogramTooth(activeOdontogramTooth === num ? null : num)}
-                            onClose={() => setActiveOdontogramTooth(null)}
                           />
                         ))}
                       </div>
@@ -1369,12 +1366,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                           <ToothButton 
                             key={num} 
                             num={num} 
-                            watch={watch} 
-                            setValue={setValue} 
+                            data={formData.odontogram?.[num]} 
                             isPrimary 
                             isActive={activeOdontogramTooth === num}
                             onToggle={() => setActiveOdontogramTooth(activeOdontogramTooth === num ? null : num)}
-                            onClose={() => setActiveOdontogramTooth(null)}
                           />
                         ))}
                       </div>
@@ -1383,17 +1378,196 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                           <ToothButton 
                             key={num} 
                             num={num} 
-                            watch={watch} 
-                            setValue={setValue} 
+                            data={formData.odontogram?.[num]} 
                             isActive={activeOdontogramTooth === num}
                             onToggle={() => setActiveOdontogramTooth(activeOdontogramTooth === num ? null : num)}
-                            onClose={() => setActiveOdontogramTooth(null)}
                           />
                         ))}
                       </div>
                       <h4 className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Rahang Bawah (Lower Jaw)</h4>
                     </div>
                   </div>
+
+                  {/* Singular Odontogram Modal */}
+                  <AnimatePresence>
+                    {activeOdontogramTooth !== null && (() => {
+                      const num = activeOdontogramTooth;
+                      const currentData = formData.odontogram?.[num] || { condition: "sou", surfaces: [], restoration: "", material: "" };
+                      const conditionCode = currentData.condition || "sou";
+
+                      const handleSurfaceToggle = (surface: string) => {
+                        const surfaces = Array.isArray(currentData.surfaces) ? [...currentData.surfaces] : [];
+                        const idx = surfaces.indexOf(surface);
+                        if (idx > -1) surfaces.splice(idx, 1);
+                        else surfaces.push(surface);
+                        setValue(`odontogram.${num}` as any, { ...currentData, surfaces });
+                      };
+
+                      const setField = (field: string, value: any) => {
+                        setValue(`odontogram.${num}` as any, { ...currentData, [field]: value });
+                      };
+
+                      return (
+                        <>
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100]" 
+                            onClick={() => setActiveOdontogramTooth(null)}
+                          />
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.9, y: 20, x: "-50%" }}
+                            animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20, x: "-50%" }}
+                            style={{ top: "50%", left: "50%" }}
+                            className="fixed -translate-x-1/2 -translate-y-1/2 w-full max-w-sm rounded-[2.5rem] bg-white p-8 shadow-[0_30px_100px_rgba(0,0,0,0.4)] border border-white/20 z-[110] max-h-[90vh] overflow-y-auto scrollbar-hide"
+                          >
+                            <div className="flex items-center justify-between mb-8 border-b border-slate-50 pb-4">
+                              <div>
+                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Odontogram</p>
+                                <h5 className="text-2xl font-black text-slate-900 leading-none">Gigi {num}</h5>
+                              </div>
+                              <button 
+                                onClick={() => setActiveOdontogramTooth(null)}
+                                className="h-10 w-10 flex items-center justify-center rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-400 transition-all active:scale-95"
+                              >
+                                <X className="h-5 w-5" />
+                              </button>
+                            </div>
+
+                            <div className="space-y-8">
+                              {/* Condition Select */}
+                              <section>
+                                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                  Kondisi Gigi
+                                </h6>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {TOOTH_CONDITIONS.map(c => (
+                                    <button
+                                      key={c.code}
+                                      onClick={() => setField("condition", c.code)}
+                                      className={cn(
+                                        "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
+                                        conditionCode === c.code 
+                                          ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md" 
+                                          : "border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200"
+                                      )}
+                                    >
+                                      {c.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </section>
+
+                              {/* Surface Select */}
+                              <section>
+                                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                  Permukaan (Surfaces)
+                                </h6>
+                                <div className="flex flex-wrap gap-2">
+                                  {["M", "O", "D", "V", "L"].map(s => (
+                                    <button
+                                      key={s}
+                                      onClick={() => handleSurfaceToggle(s)}
+                                      className={cn(
+                                        "h-12 w-12 rounded-2xl text-xs font-black transition-all border-2",
+                                        currentData.surfaces?.includes(s)
+                                          ? "bg-emerald-600 text-white border-emerald-600 shadow-lg scale-110" 
+                                          : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
+                                      )}
+                                    >
+                                      {s}
+                                    </button>
+                                  ))}
+                                </div>
+                              </section>
+
+                              {/* Material Select */}
+                              <section>
+                                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                  Bahan Restorasi (Filling)
+                                </h6>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    onClick={() => setField("material", "")}
+                                    className={cn(
+                                      "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
+                                      !currentData.material 
+                                        ? "border-slate-900 bg-slate-900 text-white" 
+                                        : "border-slate-50 bg-slate-50 text-slate-400"
+                                    )}
+                                  >
+                                    None
+                                  </button>
+                                  {RESTORATION_MATERIALS.map(m => (
+                                    <button
+                                      key={m.code}
+                                      onClick={() => setField("material", m.code)}
+                                      className={cn(
+                                        "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
+                                        currentData.material === m.code 
+                                          ? "border-amber-600 bg-amber-50 text-amber-700 shadow-md" 
+                                          : "border-slate-50 bg-slate-50 text-slate-400"
+                                      )}
+                                    >
+                                      {m.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </section>
+
+                              {/* Restoration/Prosthetic Select */}
+                              <section>
+                                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                                  Restorasi / Protesa
+                                </h6>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    onClick={() => setField("restoration", "")}
+                                    className={cn(
+                                      "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
+                                      !currentData.restoration 
+                                        ? "border-slate-900 bg-slate-900 text-white" 
+                                        : "border-slate-50 bg-slate-50 text-slate-400"
+                                    )}
+                                  >
+                                    None
+                                  </button>
+                                  {[...RESTORATIONS, ...PROSTHETICS].map(r => (
+                                    <button
+                                      key={r.code}
+                                      onClick={() => setField("restoration", r.code)}
+                                      className={cn(
+                                        "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
+                                        currentData.restoration === r.code 
+                                          ? "border-purple-600 bg-purple-50 text-purple-700 shadow-md" 
+                                          : "border-slate-50 bg-slate-50 text-slate-400"
+                                      )}
+                                    >
+                                      {r.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </section>
+                              
+                              <button 
+                                type="button"
+                                onClick={() => setActiveOdontogramTooth(null)}
+                                className="w-full py-5 rounded-3xl bg-blue-600 text-white font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
+                              >
+                                Selesai
+                              </button>
+                            </div>
+                          </motion.div>
+                        </>
+                      );
+                    })()}
+                  </AnimatePresence>
                 </div>
               </motion.div>
             )}
@@ -1443,7 +1617,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                         <div className="grid grid-cols-[repeat(16,minmax(0,1fr))] gap-4">
                           {Array.from({ length: 32 }).map((_, i) => {
                             const toothNum = i < 16 ? (i < 8 ? 18 - i : 21 + (i - 8)) : (i < 24 ? 48 - (i - 16) : 31 + (i - 24));
-                            const toothData = watch(`periodontal.teeth.${i}`) || {
+                            const toothData = formData.periodontal?.teeth?.[i] || {
                               bleeding: false, calculus: 0, pocketShallow: false, pocketDeep: false, attachmentLoss: false, extrinsicStains: 0, mobility: false, furcation: false
                             };
 
@@ -1488,155 +1662,158 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                                       </div>
                                     </div>
                                   </div>
-
-                                  {/* Centered Modal for Periodontal Data */}
-                                  <AnimatePresence>
-                                    {activePeriodontalTooth === i && (
-                                      <>
-                                        {/* Backdrop */}
-                                        <motion.div 
-                                          initial={{ opacity: 0 }}
-                                          animate={{ opacity: 1 }}
-                                          exit={{ opacity: 0 }}
-                                          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100]" 
-                                          onClick={() => setActivePeriodontalTooth(null)}
-                                        />
-                                        
-                                        {/* Modal Content */}
-                                        <motion.div 
-                                          initial={{ opacity: 0, scale: 0.9, y: 20, x: "-50%" }}
-                                          animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
-                                          exit={{ opacity: 0, scale: 0.9, y: 20, x: "-50%" }}
-                                          style={{ top: "50%", left: "50%" }}
-                                          className="fixed -translate-x-1/2 -translate-y-1/2 w-full max-w-sm rounded-[2.5rem] bg-white p-8 shadow-[0_30px_100px_rgba(0,0,0,0.4)] border border-white/20 z-[110] max-h-[90vh] overflow-y-auto scrollbar-hide"
-                                        >
-                                          <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-50">
-                                            <div>
-                                              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">DATA PERIODONTAL</p>
-                                              <h5 className="text-2xl font-black text-slate-900 leading-none">Gigi {toothNum}</h5>
-                                            </div>
-                                            <button 
-                                              onClick={() => setActivePeriodontalTooth(null)}
-                                              className="h-10 w-10 flex items-center justify-center rounded-2xl bg-slate-50 hover:bg-red-50 hover:text-red-500 text-slate-400 transition-all active:scale-95"
-                                            >
-                                              <X className="h-5 w-5" />
-                                            </button>
-                                          </div>
-                                          
-                                          <div className="space-y-6">
-                                            {/* Diagnostic Options */}
-                                            <div className="space-y-2">
-                                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Kondisi Klinis</p>
-                                              {[
-                                                { id: "bleeding", label: "BOP (Bleeding)", color: "text-red-500", bg: "bg-red-50", icon: "🔴" },
-                                                { id: "pocketShallow", label: "Pocket > 4mm", color: "text-purple-500", bg: "bg-purple-50", icon: "🟣" },
-                                                { id: "attachmentLoss", label: "Att. Loss > 1mm", color: "text-orange-500", bg: "bg-orange-50", icon: "🟠" },
-                                                { id: "mobility", label: "Kegoyangan (Mobility)", color: "text-red-800", bg: "bg-red-50", icon: "⏬" },
-                                                { id: "furcation", label: "Keterlibatan Furkasi", color: "text-blue-800", bg: "bg-blue-50", icon: "🔱" },
-                                              ].map(cond => (
-                                                <label key={cond.id} className={cn(
-                                                  "flex items-center justify-between gap-4 cursor-pointer p-4 rounded-2xl transition-all border-2",
-                                                  !!toothData[cond.id as keyof typeof toothData] 
-                                                    ? `border-blue-500 ${cond.bg} shadow-md` 
-                                                    : "border-slate-50 hover:border-slate-200 bg-white"
-                                                )}>
-                                                  <div className="flex items-center gap-3">
-                                                    <span className="text-lg">{cond.icon}</span>
-                                                    <span className={cn("text-xs font-black uppercase tracking-tight", cond.color)}>{cond.label}</span>
-                                                  </div>
-                                                  <div className={cn(
-                                                    "h-7 w-7 rounded-xl border-2 flex items-center justify-center transition-all",
-                                                    !!toothData[cond.id as keyof typeof toothData] ? "bg-blue-500 border-blue-500 text-white" : "bg-white border-slate-200"
-                                                  )}>
-                                                    {!!toothData[cond.id as keyof typeof toothData] && <CheckCircle2 className="h-4 w-4" />}
-                                                  </div>
-                                                  <input 
-                                                    type="checkbox" 
-                                                    className="hidden"
-                                                    checked={!!toothData[cond.id as keyof typeof toothData]}
-                                                    onChange={(e) => {
-                                                      const newData = { ...toothData, [cond.id]: e.target.checked };
-                                                      setValue(`periodontal.teeth.${i}` as any, newData as any);
-                                                    }}
-                                                  />
-                                                </label>
-                                              ))}
-                                            </div>
-
-                                            {/* Scoring Sections */}
-                                            <div className="pt-6 border-t border-slate-100 space-y-8">
-                                              <div>
-                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                  <Activity className="h-3 w-3" />
-                                                  Skor Kalkulus
-                                                </div>
-                                                <div className="grid grid-cols-4 gap-2">
-                                                  {[0, 1, 2, 3].map(score => (
-                                                    <button
-                                                      key={score}
-                                                      type="button"
-                                                      onClick={() => {
-                                                        const newData = { ...toothData, calculus: score };
-                                                        setValue(`periodontal.teeth.${i}` as any, newData as any);
-                                                      }}
-                                                      className={cn(
-                                                        "h-14 rounded-2xl text-lg font-black transition-all border-2 shadow-sm",
-                                                        toothData.calculus === score 
-                                                          ? "bg-slate-900 text-white border-slate-900 shadow-xl scale-105" 
-                                                          : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
-                                                      )}
-                                                    >
-                                                      {score}
-                                                    </button>
-                                                  ))}
-                                                </div>
-                                              </div>
-
-                                              <div>
-                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                  <Activity className="h-3 w-3" />
-                                                  Skor Stain (Ekstrinsik)
-                                                </div>
-                                                <div className="grid grid-cols-4 gap-2">
-                                                  {[0, 1, 2, 3].map(score => (
-                                                    <button
-                                                      key={score}
-                                                      type="button"
-                                                      onClick={() => {
-                                                        const newData = { ...toothData, extrinsicStains: score };
-                                                        setValue(`periodontal.teeth.${i}` as any, newData as any);
-                                                      }}
-                                                      className={cn(
-                                                        "h-14 rounded-2xl text-lg font-black transition-all border-2 shadow-sm",
-                                                        toothData.extrinsicStains === score 
-                                                          ? "bg-yellow-600 text-white border-yellow-600 shadow-xl scale-105" 
-                                                          : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
-                                                      )}
-                                                    >
-                                                      {score}
-                                                    </button>
-                                                  ))}
-                                                </div>
-                                              </div>
-                                            </div>
-
-                                            <button 
-                                              type="button"
-                                              onClick={() => setActivePeriodontalTooth(null)}
-                                              className="w-full py-5 rounded-3xl bg-blue-600 text-white font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
-                                            >
-                                              Selesai
-                                            </button>
-                                          </div>
-                                        </motion.div>
-                                      </>
-                                    )}
-                                  </AnimatePresence>
                                 </div>
                               </div>
                             );
                           })}
                         </div>
+
+                        {/* Centered Modal for Periodontal Data - Singular outside loop */}
+                        <AnimatePresence>
+                          {activePeriodontalTooth !== null && (() => {
+                            const i = activePeriodontalTooth;
+                            const toothNum = i < 16 ? (i < 8 ? 18 - i : 21 + (i - 8)) : (i < 24 ? 48 - (i - 16) : 31 + (i - 24));
+                            const toothData = formData.periodontal?.teeth?.[i] || {
+                              bleeding: false, calculus: 0, pocketShallow: false, pocketDeep: false, attachmentLoss: false, extrinsicStains: 0, mobility: false, furcation: false
+                            };
+
+                            return (
+                              <>
+                                <motion.div 
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100]" 
+                                  onClick={() => setActivePeriodontalTooth(null)}
+                                />
+                                <motion.div 
+                                  initial={{ opacity: 0, scale: 0.9, y: 20, x: "-50%" }}
+                                  animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
+                                  exit={{ opacity: 0, scale: 0.9, y: 20, x: "-50%" }}
+                                  style={{ top: "50%", left: "50%" }}
+                                  className="fixed -translate-x-1/2 -translate-y-1/2 w-full max-w-sm rounded-[2.5rem] bg-white p-8 shadow-[0_30px_100px_rgba(0,0,0,0.4)] border border-white/20 z-[110] max-h-[90vh] overflow-y-auto scrollbar-hide"
+                                >
+                                  <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-50">
+                                    <div>
+                                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">DATA PERIODONTAL</p>
+                                      <h5 className="text-2xl font-black text-slate-900 leading-none">Gigi {toothNum}</h5>
+                                    </div>
+                                    <button 
+                                      onClick={() => setActivePeriodontalTooth(null)}
+                                      className="h-10 w-10 flex items-center justify-center rounded-2xl bg-slate-50 hover:bg-red-50 hover:text-red-500 text-slate-400 transition-all active:scale-95"
+                                    >
+                                      <X className="h-5 w-5" />
+                                    </button>
+                                  </div>
+                                  
+                                  <div className="space-y-6">
+                                    <div className="space-y-2">
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Kondisi Klinis</p>
+                                      {[
+                                        { id: "bleeding", label: "BOP (Bleeding)", color: "text-red-500", bg: "bg-red-50", icon: "🔴" },
+                                        { id: "pocketShallow", label: "Pocket > 4mm", color: "text-purple-500", bg: "bg-purple-50", icon: "🟣" },
+                                        { id: "attachmentLoss", label: "Att. Loss > 1mm", color: "text-orange-500", bg: "bg-orange-50", icon: "🟠" },
+                                        { id: "mobility", label: "Kegoyangan (Mobility)", color: "text-red-800", bg: "bg-red-50", icon: "⏬" },
+                                        { id: "furcation", label: "Keterlibatan Furkasi", color: "text-blue-800", bg: "bg-blue-50", icon: "🔱" },
+                                      ].map(cond => (
+                                        <label key={cond.id} className={cn(
+                                          "flex items-center justify-between gap-4 cursor-pointer p-4 rounded-2xl transition-all border-2",
+                                          !!toothData[cond.id as keyof typeof toothData] 
+                                            ? `border-blue-500 ${cond.bg} shadow-md` 
+                                            : "border-slate-50 hover:border-slate-200 bg-white"
+                                        )}>
+                                          <div className="flex items-center gap-3">
+                                            <span className="text-lg">{cond.icon}</span>
+                                            <span className={cn("text-xs font-black uppercase tracking-tight", cond.color)}>{cond.label}</span>
+                                          </div>
+                                          <div className={cn(
+                                            "h-7 w-7 rounded-xl border-2 flex items-center justify-center transition-all",
+                                            !!toothData[cond.id as keyof typeof toothData] ? "bg-blue-500 border-blue-500 text-white" : "bg-white border-slate-200"
+                                          )}>
+                                            {!!toothData[cond.id as keyof typeof toothData] && <CheckCircle2 className="h-4 w-4" />}
+                                          </div>
+                                          <input 
+                                            type="checkbox" 
+                                            className="hidden"
+                                            checked={!!toothData[cond.id as keyof typeof toothData]}
+                                            onChange={(e) => {
+                                              const newData = { ...toothData, [cond.id]: e.target.checked };
+                                              setValue(`periodontal.teeth.${i}` as any, newData as any);
+                                            }}
+                                          />
+                                        </label>
+                                      ))}
+                                    </div>
+
+                                    <div className="pt-6 border-t border-slate-100 space-y-8">
+                                      <div>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                          <Activity className="h-3 w-3" />
+                                          Skor Kalkulus
+                                        </div>
+                                        <div className="grid grid-cols-4 gap-2">
+                                          {[0, 1, 2, 3].map(score => (
+                                            <button
+                                              key={score}
+                                              type="button"
+                                              onClick={() => {
+                                                const newData = { ...toothData, calculus: score };
+                                                setValue(`periodontal.teeth.${i}` as any, newData as any);
+                                              }}
+                                              className={cn(
+                                                "h-14 rounded-2xl text-lg font-black transition-all border-2 shadow-sm",
+                                                toothData.calculus === score 
+                                                  ? "bg-slate-900 text-white border-slate-900 shadow-xl scale-105" 
+                                                  : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
+                                              )}
+                                            >
+                                              {score}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      <div>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                          <Activity className="h-3 w-3" />
+                                          Skor Stain (Ekstrinsik)
+                                        </div>
+                                        <div className="grid grid-cols-4 gap-2">
+                                          {[0, 1, 2, 3].map(score => (
+                                            <button
+                                              key={score}
+                                              type="button"
+                                              onClick={() => {
+                                                const newData = { ...toothData, extrinsicStains: score };
+                                                setValue(`periodontal.teeth.${i}` as any, newData as any);
+                                              }}
+                                              className={cn(
+                                                "h-14 rounded-2xl text-lg font-black transition-all border-2 shadow-sm",
+                                                toothData.extrinsicStains === score 
+                                                  ? "bg-yellow-600 text-white border-yellow-600 shadow-xl scale-105" 
+                                                  : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
+                                              )}
+                                            >
+                                              {score}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <button 
+                                      type="button"
+                                      onClick={() => setActivePeriodontalTooth(null)}
+                                      className="w-full py-5 rounded-3xl bg-blue-600 text-white font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
+                                    >
+                                      Selesai
+                                    </button>
+                                  </div>
+                                </motion.div>
+                              </>
+                            );
+                          })()}
+                        </AnimatePresence>
                       </div>
 
                       <div className="lg:col-span-3 space-y-6 border-l border-slate-100 pl-10">
@@ -1901,50 +2078,82 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                         <div className="mb-4 rounded-full bg-blue-50 p-4 text-blue-600">
                           <Sparkles className="h-8 w-8" />
                         </div>
-                        <h4 className="text-lg font-bold text-slate-900">Generate Ringkasan AI</h4>
-                        <p className="max-w-md text-sm text-slate-500 mb-6">Gunakan AI untuk membuat ringkasan kondisi pasien yang mudah dimengerti untuk dibawa pulang.</p>
+                        <h4 className="text-lg font-bold text-slate-900">Penilaian Kondisi Selesai</h4>
+                        <p className="max-w-md text-sm text-slate-500 mb-6">Generasikan ringkasan kesehatan untuk pasien. AI akan merangkum semua data pemeriksaan menjadi bahasa yang mudah dipahami.</p>
                         <button 
                           type="button"
                           onClick={async () => {
-                            setIsGeneratingAi(true);
-                            const summary = await generatePatientSummary(watch());
-                            setAiSummary(summary);
-                            setIsGeneratingAi(false);
+                            try {
+                              setIsGeneratingAi(true);
+                              const currentValues = watch(); 
+                              const summary = await generatePatientSummary(currentValues);
+                              setAiSummary(summary);
+                            } catch (err) {
+                              console.error("AI Generation Error:", err);
+                              setAiSummary("Maaf, gagal membuat ringkasan. Pastikan kunci API Gemini sudah terpasang.");
+                            } finally {
+                              setIsGeneratingAi(false);
+                            }
                           }}
                           disabled={isGeneratingAi}
-                          className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 font-black text-white shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all disabled:opacity-50"
+                          className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 font-black text-white shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all disabled:opacity-50 active:scale-95"
                         >
                           {isGeneratingAi ? (
-                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            <RefreshCw className="h-5 w-5 animate-spin" />
                           ) : (
                             <Sparkles className="h-5 w-5" />
                           )}
-                          BUAT RINGKASAN SEKARANG
+                          {isGeneratingAi ? "SEDANG MENGANALISIS..." : "GENERASIKAN RINGKASAN RAMAH PASIEN"}
                         </button>
                       </div>
                     ) : (
-                      <div className="space-y-6">
-                        <div className="prose prose-slate max-w-none rounded-3xl bg-slate-50 p-8 border border-slate-100 text-slate-700 leading-relaxed whitespace-pre-wrap">
-                          {aiSummary}
+                        <div id="printable-summary" className="space-y-6 text-left">
+                          {/* Print Only Header */}
+                          <div className="print-only mb-10 pb-6 border-b-2 border-slate-200 hidden print:block">
+                            <div className="flex items-center justify-between mb-8">
+                              <div>
+                                <h1 className="text-3xl font-black text-slate-900 leading-none mb-2">LAPORAN KESEHATAN GIGI</h1>
+                                <p className="text-sm font-bold text-blue-600 tracking-widest uppercase">Klinik ASIDENT - Aplikasi Dental Asuhan Terpadu</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xl font-bold text-slate-900">{watch("demographics.fullName")}</p>
+                                <p className="text-xs text-slate-500">Tanggal: {new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="prose prose-slate max-w-none rounded-[2.5rem] bg-slate-50 p-10 border border-slate-100 text-slate-700 leading-relaxed shadow-inner">
+                            <div className="mb-4 flex items-center gap-2 no-print">
+                               <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                               <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Laporan Pasien (AI Generated)</span>
+                            </div>
+                            <div className="whitespace-pre-wrap font-medium">
+                              {aiSummary}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between no-print">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  setTimeout(() => window.print(), 100);
+                                }}
+                                className="flex items-center gap-2 rounded-2xl bg-slate-900 px-8 py-4 text-sm font-black text-white hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                              >
+                                <Printer className="h-5 w-5" />
+                                CETAK RINGKASAN
+                              </button>
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => setAiSummary("")}
+                              className="flex items-center gap-1.5 px-6 py-4 rounded-xl text-xs font-black text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                            >
+                              <Plus className="h-4 w-4 rotate-45" />
+                              Hapus & Buat Ulang
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <button 
-                            type="button"
-                            onClick={() => window.print()}
-                            className="flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-black text-white hover:bg-slate-800 transition-all"
-                          >
-                            <Printer className="h-4 w-4" />
-                            CETAK UNTUK PASIEN
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => setAiSummary("")}
-                            className="text-sm font-bold text-slate-400 hover:text-slate-600"
-                          >
-                            Buat Ulang
-                          </button>
-                        </div>
-                      </div>
                     )}
                   </div>
                 </div>
@@ -1984,7 +2193,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-50">Total Pembayaran</p>
                         <h3 className="text-5xl font-black tracking-tighter mt-1">
                           Rp {(() => {
-                            const selected = watch("billing.services") || [];
+                            const selected = formData.billing?.services || [];
                             const total = selected.reduce((acc: number, id: string) => {
                               const s = DENTAL_SERVICES.find(x => x.id === id);
                               return acc + (s?.price || 0);
@@ -2007,7 +2216,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
           </AnimatePresence>
 
           {/* Footer Navigation */}
-          <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 lg:left-0">
+          <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 lg:left-0 no-print">
             <div className="mx-auto max-w-5xl flex items-center justify-between">
               <button 
                 type="button"
@@ -2078,31 +2287,11 @@ function PatientHeader({ name }: { name: string }) {
   );
 }
 
-function ToothButton({ num, watch, setValue, isPrimary = false, isActive, onToggle, onClose }: any) {
-  const currentData = watch(`odontogram.${num}`) || { condition: "sou", surfaces: [], restoration: "", material: "" };
+function ToothButton({ num, data, isPrimary = false, isActive, onToggle }: any) {
+  const currentData = data || { condition: "sou", surfaces: [], restoration: "", material: "" };
   const conditionCode = typeof currentData === 'string' ? currentData : (currentData.condition || "sou");
   const condDetails = TOOTH_CONDITIONS.find(c => c.code === conditionCode);
   
-  const handleSurfaceToggle = (surface: string) => {
-    const surfaces = Array.isArray(currentData.surfaces) ? [...currentData.surfaces] : [];
-    const idx = surfaces.indexOf(surface);
-    if (idx > -1) surfaces.splice(idx, 1);
-    else surfaces.push(surface);
-    setValue(`odontogram.${num}`, { ...currentData, surfaces });
-  };
-
-  const setCondition = (code: string) => {
-    setValue(`odontogram.${num}`, { ...currentData, condition: code });
-  };
-
-  const setMaterial = (code: string) => {
-    setValue(`odontogram.${num}`, { ...currentData, material: code });
-  };
-
-  const setRestoration = (code: string) => {
-    setValue(`odontogram.${num}`, { ...currentData, restoration: code });
-  };
-
   return (
     <div className="flex flex-col items-center gap-1.5 relative">
       {!isPrimary && <span className="text-[9px] font-black text-slate-400">{num}</span>}
@@ -2147,146 +2336,6 @@ function ToothButton({ num, watch, setValue, isPrimary = false, isActive, onTogg
         )}
       </button>
       {isPrimary && <span className="text-[9px] font-black text-blue-400">{num}</span>}
-
-      {isActive && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onClose} />
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-80 rounded-[2.5rem] bg-white p-8 shadow-[0_25px_60px_rgba(0,0,0,0.3)] border-2 border-slate-50 z-50 animate-in fade-in zoom-in slide-in-from-bottom-4 duration-300">
-            <div className="flex items-center justify-between mb-8 border-b border-slate-50 pb-4">
-              <div>
-                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Odontogram</p>
-                <h5 className="text-xl font-black text-slate-900 leading-none">Gigi {num}</h5>
-              </div>
-              <button 
-                onClick={onClose}
-                className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-8 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {/* Condition Select */}
-              <section>
-                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                  Kondisi Gigi
-                </h6>
-                <div className="grid grid-cols-2 gap-2">
-                  {TOOTH_CONDITIONS.map(c => (
-                    <button
-                      key={c.code}
-                      onClick={() => setCondition(c.code)}
-                      className={cn(
-                        "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
-                        conditionCode === c.code 
-                          ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md" 
-                          : "border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200"
-                      )}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              {/* Surface Select */}
-              <section>
-                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Permukaan (Surfaces)
-                </h6>
-                <div className="flex flex-wrap gap-2">
-                  {["M", "O", "D", "V", "L"].map(s => (
-                    <button
-                      key={s}
-                      onClick={() => handleSurfaceToggle(s)}
-                      className={cn(
-                        "h-12 w-12 rounded-2xl text-xs font-black transition-all border-2",
-                        currentData.surfaces?.includes(s)
-                          ? "bg-emerald-600 text-white border-emerald-600 shadow-lg scale-110" 
-                          : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
-                      )}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              {/* Material Select */}
-              <section>
-                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                  Bahan Restorasi (Filling)
-                </h6>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setMaterial("")}
-                    className={cn(
-                      "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
-                      !currentData.material 
-                        ? "border-slate-900 bg-slate-900 text-white" 
-                        : "border-slate-50 bg-slate-50 text-slate-400"
-                    )}
-                  >
-                    None
-                  </button>
-                  {RESTORATION_MATERIALS.map(m => (
-                    <button
-                      key={m.code}
-                      onClick={() => setMaterial(m.code)}
-                      className={cn(
-                        "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
-                        currentData.material === m.code 
-                          ? "border-amber-600 bg-amber-50 text-amber-700 shadow-md" 
-                          : "border-slate-50 bg-slate-50 text-slate-400"
-                      )}
-                    >
-                      {m.name}
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              {/* Restoration/Prosthetic Select */}
-              <section>
-                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
-                  Restorasi / Protesa
-                </h6>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => { setRestoration(""); }}
-                    className={cn(
-                      "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
-                      !currentData.restoration 
-                        ? "border-slate-900 bg-slate-900 text-white" 
-                        : "border-slate-50 bg-slate-50 text-slate-400"
-                    )}
-                  >
-                    None
-                  </button>
-                  {[...RESTORATIONS, ...PROSTHETICS].map(r => (
-                    <button
-                      key={r.code}
-                      onClick={() => setRestoration(r.code)}
-                      className={cn(
-                        "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
-                        currentData.restoration === r.code 
-                          ? "border-purple-600 bg-purple-50 text-purple-700 shadow-md" 
-                          : "border-slate-50 bg-slate-50 text-slate-400"
-                      )}
-                    >
-                      {r.name}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }

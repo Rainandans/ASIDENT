@@ -1,40 +1,72 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const API_KEY = process.env.GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(API_KEY);
+const API_KEY = process.env.GEMINI_API_KEY;
+const ai = new GoogleGenAI({ apiKey: API_KEY || "" });
 
 export async function generatePatientSummary(patientData: any) {
   if (!API_KEY) {
-    return "Layanan ringkasan AI belum dikonfigurasi. Hubungi administrator untuk mengatur kunci API.";
+    return "Layanan ringkasan AI belum dikonfigurasi. Pastikan GEMINI_API_KEY telah diatur di Pengaturan.";
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
   const prompt = `
-    Anda adalah seorang asisten terapis gigi profesional. 
-    Berdasarkan data pemeriksaan berikut, buatlah ringkasan kondisi kesehatan gigi dan mulut pasien dalam bahasa Indonesia yang mudah dimengerti oleh pasien (awam).
-    Sertakan:
-    1. Ringkasan kondisi saat ini (OHIS, Karies, Jaringan Periodontal).
-    2. Tindakan yang telah dilakukan.
-    3. Rencana kunjungan berikutnya dan instruksi perawatan di rumah.
-    
-    Data Pasien:
-    Nama: ${patientData.demographics?.fullName || "Pasien"}
-    OHIS: ${patientData.ohis?.score || "N/A"}
-    Masalah Utama: ${patientData.diagnosis?.map((d: any) => d.needId).join(", ") || "N/A"}
-    Tindakan: ${patientData.billing?.services?.join(", ") || "N/A"}
-    Kunjungan Berikutnya: ${patientData.nextVisit?.date || "N/A"}
-    Rekomendasi: ${patientData.nextVisit?.recommendation || "N/A"}
-    
-    Format output harus ramah, profesional, dan memberikan motivasi. Gunakan poin-poin agar mudah dibaca.
+    Anda adalah seorang Terapis Gigi dan Mulut profesional. Tugas Anda adalah membuat ringkasan kesehatan gigi dan mulut yang RAMAH PASIEN, MOTIVASIONAL, dan MUDAH DIPAHAMI berdasarkan data pemeriksaan berikut.
+
+    DATA PASIEN:
+    - Nama: ${patientData.demographics?.fullName || "Pasien"}
+    - Usia: ${patientData.demographics?.age || "-"} tahun
+    - Jenis Kelamin: ${patientData.demographics?.gender === "L" ? "Laki-laki" : "Perempuan"}
+
+    TEMUAN KLINIS UTAMA:
+    1. KONDISI GIGI (Odontogram):
+       ${Object.entries(patientData.odontogram || {}).map(([num, data]: [string, any]) => 
+         `Gigi ${num}: ${data.condition}${data.surfaces?.length ? " pada permukaan " + data.surfaces.join(",") : ""}${data.restoration ? " (Restorasi: " + data.restoration + ")" : ""}`
+       ).join("\n       ") || "Tidak ada anomali signifikan tercatat."}
+
+    2. KONDISI GUSI & JARINGAN PENDUKUNG (Periodontal):
+       ${patientData.periodontal?.teeth?.map((t: any, i: number) => {
+         const issues = [];
+         const toothNum = i < 16 ? (i < 8 ? 18 - i : 21 + (i - 8)) : (i < 24 ? 48 - (i - 16) : 31 + (i - 24));
+         if (t.bleeding) issues.push("Berdarah (BOP)");
+         if (t.pocketDeep || t.pocketShallow) issues.push("Kantong gusi dalam");
+         if (t.calculus > 0) issues.push("Karang gigi (skor " + t.calculus + ")");
+         if (t.attachmentLoss) issues.push("Penyusutan gusi");
+         if (t.extrinsicStains > 0) issues.push("Noda gigi (stain)");
+         if (t.mobility) issues.push("Gigi goyang");
+         if (t.furcation) issues.push("Masalah akar (furkasi)");
+         return issues.length ? `Gigi ${toothNum}: ${issues.join(", ")}` : null;
+       }).filter(Boolean).join("\n       ") || "Kondisi periodontal secara umum baik."}
+
+    3. KEBERSIHAN MULUT (OHI-S):
+       - Skor Debris: ${patientData.ohis?.debrisTotal || "-"}
+       - Skor Kalkulus: ${patientData.ohis?.calculusTotal || "-"}
+       - Kategori: ${patientData.ohis?.index || "-"}
+
+    DIAGNOSIS & KEBUTUHAN MANUSIA:
+    ${patientData.diagnosis?.map((d: any) => `- ${d.name || d.diagnosis}`).join("\n    ") || "Dalam batas normal."}
+
+    TINDAKAN YANG DIREKOMENDASIKAN:
+    - Rencana Perawatan: ${patientData.nextVisit?.recommendation || "Pembersihan rutin dan kontrol berkala."}
+    - Tanggal Kunjungan Berikutnya: ${patientData.nextVisit?.date || "Akan dijadwalkan"}
+
+    INSTRUKSI UNTUK GENERASI:
+    1. Gunakan Bahasa Indonesia yang sopan, hangat, dan memotivasi.
+    2. Hindari istilah medis yang terlalu rumit, jelaskan dampaknya bagi pasien.
+    3. Fokus pada: (A) Apa masalahnya, (B) Apa dampaknya jika tidak dirawat, (C) Apa solusinya, (D) Pesan penyemangat.
+    4. Format ringkasan dengan poin-poin agar mudah dibaca.
+    5. Berikan saran kebersihan rumah (Home Care) yang spesifik berdasarkan temuan.
+
+    HASIL OUTPUT (Langsung ke ringkasan):
   `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text() || "Maaf, ringkasan tidak dapat dihasilkan.";
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+    });
+    
+    return response.text || "Maaf, ringkasan tidak dapat dihasilkan saat ini.";
   } catch (error) {
     console.error("Error generating summary:", error);
-    return "Maaf, ringkasan otomatis tidak dapat dibuat saat ini. Harap periksa koneksi atau coba lagi nanti.";
+    return "Maaf, terjadi kesalahan teknis saat membuat ringkasan. Harap periksa koneksi atau coba lagi nanti.";
   }
 }

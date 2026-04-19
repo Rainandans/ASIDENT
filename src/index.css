@@ -59,3 +59,49 @@
 .animate-float {
   animation: float 4s ease-in-out infinite;
 }
+
+/* Print Styles */
+@media print {
+  body {
+    background: white !important;
+    background-image: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Hide everything except printable area */
+  body > div:not(#root) {
+    display: none !important;
+  }
+
+  /* Target the specific summary container */
+  #printable-summary {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 40px;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Ensure text is readable */
+  .whitespace-pre-wrap {
+    color: black !important;
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+  }
+}
+
+.print-only {
+  display: none;
+}
