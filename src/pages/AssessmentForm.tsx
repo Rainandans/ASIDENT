@@ -32,7 +32,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { cn } from "../lib/utils";
-import { HUMAN_NEEDS, TOOTH_CONDITIONS, DENTAL_SERVICES } from "../constants";
+import { HUMAN_NEEDS, TOOTH_CONDITIONS, DENTAL_SERVICES, RESTORATION_MATERIALS, RESTORATIONS, PROSTHETICS } from "../constants";
 import confetti from "canvas-confetti";
 
 interface AssessmentFormProps {
@@ -173,6 +173,8 @@ const INITIAL_FORM_STATE = {
       pocketDeep: false,
       attachmentLoss: false,
       extrinsicStains: 0,
+      mobility: false,
+      furcation: false,
     })),
   },
   documentation: {
@@ -209,6 +211,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [activePeriodontalTooth, setActivePeriodontalTooth] = useState<number | null>(null);
+  const [activeOdontogramTooth, setActiveOdontogramTooth] = useState<number | null>(null);
   const [aiSummary, setAiSummary] = useState("");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const totalSteps = 10;
@@ -505,6 +508,8 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         pocketDeep: false,
         attachmentLoss: false,
         extrinsicStains: 0,
+        mobility: false,
+        furcation: false,
       })),
     });
     setValue("diagnosis", []);
@@ -1315,44 +1320,78 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                 <SectionHeader title="Odontogram Terpadu" icon={HeartPulse} />
                 
                 <div className="rounded-[2rem] bg-white p-8 border border-slate-100 shadow-xl shadow-blue-900/5 overflow-x-auto">
-                  <div className="mb-8 flex flex-wrap gap-3 justify-center">
+                  <div className="mb-8 flex flex-wrap gap-2 justify-center max-w-4xl mx-auto">
                     {TOOTH_CONDITIONS.map(cond => (
-                      <div key={cond.code} className="flex items-center gap-2 rounded-full border border-slate-100 bg-slate-50 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
-                        <div className={cn("h-3 w-3 rounded-full border shadow-sm", cond.color)} />
+                      <div key={cond.code} className="flex items-center gap-2 rounded-full border border-slate-100 bg-white px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-500 shadow-sm transition-all hover:bg-slate-50 cursor-default">
+                        <div className={cn("h-2.5 w-2.5 rounded-full border shadow-sm", cond.color)} />
                         {cond.name}
                       </div>
                     ))}
                   </div>
 
-                  <div className="space-y-12 min-w-[800px]">
+                  <div className="space-y-12 min-w-[850px] py-10">
                     {/* Upper Jaw */}
-                    <div className="space-y-4">
-                      <h4 className="text-center text-xs font-black uppercase tracking-widest text-slate-400">Rahang Atas (Upper Jaw)</h4>
-                      <div className="flex justify-center gap-2">
+                    <div className="space-y-6">
+                      <h4 className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Rahang Atas (Upper Jaw)</h4>
+                      <div className="flex justify-center gap-1.5">
                         {[18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28].map((num) => (
-                          <ToothButton key={num} num={num} register={register} watch={watch} setValue={setValue} />
+                          <ToothButton 
+                            key={num} 
+                            num={num} 
+                            watch={watch} 
+                            setValue={setValue} 
+                            isActive={activeOdontogramTooth === num}
+                            onToggle={() => setActiveOdontogramTooth(activeOdontogramTooth === num ? null : num)}
+                            onClose={() => setActiveOdontogramTooth(null)}
+                          />
                         ))}
                       </div>
-                      <div className="flex justify-center gap-2">
+                      <div className="flex justify-center gap-1.5">
                         {[55, 54, 53, 52, 51, 61, 62, 63, 64, 65].map((num) => (
-                          <ToothButton key={num} num={num} register={register} watch={watch} setValue={setValue} isPrimary />
+                          <ToothButton 
+                            key={num} 
+                            num={num} 
+                            watch={watch} 
+                            setValue={setValue} 
+                            isPrimary 
+                            isActive={activeOdontogramTooth === num}
+                            onToggle={() => setActiveOdontogramTooth(activeOdontogramTooth === num ? null : num)}
+                            onClose={() => setActiveOdontogramTooth(null)}
+                          />
                         ))}
                       </div>
                     </div>
 
                     {/* Lower Jaw */}
-                    <div className="space-y-4">
-                      <div className="flex justify-center gap-2">
+                    <div className="space-y-6">
+                      <div className="flex justify-center gap-1.5">
                         {[85, 84, 83, 82, 81, 71, 72, 73, 74, 75].map((num) => (
-                          <ToothButton key={num} num={num} register={register} watch={watch} setValue={setValue} isPrimary />
+                          <ToothButton 
+                            key={num} 
+                            num={num} 
+                            watch={watch} 
+                            setValue={setValue} 
+                            isPrimary 
+                            isActive={activeOdontogramTooth === num}
+                            onToggle={() => setActiveOdontogramTooth(activeOdontogramTooth === num ? null : num)}
+                            onClose={() => setActiveOdontogramTooth(null)}
+                          />
                         ))}
                       </div>
-                      <div className="flex justify-center gap-2">
+                      <div className="flex justify-center gap-1.5">
                         {[48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38].map((num) => (
-                          <ToothButton key={num} num={num} register={register} watch={watch} setValue={setValue} />
+                          <ToothButton 
+                            key={num} 
+                            num={num} 
+                            watch={watch} 
+                            setValue={setValue} 
+                            isActive={activeOdontogramTooth === num}
+                            onToggle={() => setActiveOdontogramTooth(activeOdontogramTooth === num ? null : num)}
+                            onClose={() => setActiveOdontogramTooth(null)}
+                          />
                         ))}
                       </div>
-                      <h4 className="text-center text-xs font-black uppercase tracking-widest text-slate-400">Rahang Bawah (Lower Jaw)</h4>
+                      <h4 className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Rahang Bawah (Lower Jaw)</h4>
                     </div>
                   </div>
                 </div>
@@ -1405,7 +1444,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                           {Array.from({ length: 32 }).map((_, i) => {
                             const toothNum = i < 16 ? (i < 8 ? 18 - i : 21 + (i - 8)) : (i < 24 ? 48 - (i - 16) : 31 + (i - 24));
                             const toothData = watch(`periodontal.teeth.${i}`) || {
-                              bleeding: false, calculus: 0, pocketShallow: false, pocketDeep: false, attachmentLoss: false, extrinsicStains: false
+                              bleeding: false, calculus: 0, pocketShallow: false, pocketDeep: false, attachmentLoss: false, extrinsicStains: 0, mobility: false, furcation: false
                             };
 
                             return (
@@ -1416,8 +1455,8 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                                     onClick={() => setActivePeriodontalTooth(activePeriodontalTooth === i ? null : i)}
                                     className={cn(
                                       "h-16 w-12 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer",
-                                      (toothData.bleeding || (toothData.calculus as number) > 0 || toothData.pocketShallow || toothData.pocketDeep || (toothData.extrinsicStains as number) > 0 || toothData.attachmentLoss) 
-                                        ? "border-blue-500 bg-blue-50/50 shadow-sm" 
+                                      (toothData.bleeding || (toothData.calculus as number) > 0 || toothData.pocketShallow || toothData.pocketDeep || (toothData.extrinsicStains as number) > 0 || toothData.attachmentLoss || toothData.mobility || toothData.furcation) 
+                                        ? "border-blue-500 bg-blue-50/50 shadow-md scale-105" 
                                         : "border-slate-100 bg-slate-50 hover:border-blue-200"
                                     )}
                                   >
@@ -1427,124 +1466,172 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                                           {Number(toothData.calculus || 0) + Number(toothData.extrinsicStains || 0)}
                                         </div>
                                       )}
-                                      <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 p-1">
+                                      <div className="absolute inset-0 grid grid-cols-2 grid-rows-3 p-1">
                                         <div className="flex items-start justify-start">
-                                          {toothData.bleeding && <div className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />}
+                                          {toothData.bleeding && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
                                         </div>
                                         <div className="flex items-start justify-end">
-                                          {(toothData.pocketShallow || toothData.pocketDeep) && <div className="h-2.5 w-2.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]" />}
+                                          {(toothData.pocketShallow || toothData.pocketDeep) && <div className="h-2 w-2 rounded-full bg-purple-500" />}
+                                        </div>
+                                        <div className="flex items-center justify-start">
+                                          {toothData.mobility && <div className="h-2 w-2 rounded-full bg-red-800" />}
+                                        </div>
+                                        <div className="flex items-center justify-end">
+                                          {toothData.furcation && <div className="h-2 w-2 rounded-full bg-blue-800" />}
                                         </div>
                                         <div className="flex items-end justify-start">
-                                          {toothData.attachmentLoss && <div className="h-2.5 w-2.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" />}
+                                          {toothData.attachmentLoss && <div className="h-2 w-2 rounded-full bg-orange-500" />}
                                         </div>
                                         <div className="flex items-end justify-end">
-                                          {Number(toothData.extrinsicStains || 0) > 0 && <div className="h-2.5 w-2.5 rounded-full bg-yellow-600 shadow-[0_0_8px_rgba(202,138,4,0.5)]" />}
+                                          {Number(toothData.extrinsicStains || 0) > 0 && <div className="h-2 w-2 rounded-full bg-yellow-600" />}
                                         </div>
                                       </div>
                                     </div>
                                   </div>
 
-                                  {/* Popover Menu */}
-                                  {activePeriodontalTooth === i && (
-                                    <>
-                                      <div 
-                                        className="fixed inset-0 z-20" 
-                                        onClick={() => setActivePeriodontalTooth(null)}
-                                      />
-                                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 rounded-[2rem] bg-white p-6 shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 z-30 animate-in fade-in zoom-in slide-in-from-bottom-2 duration-200">
-                                        <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-2">
-                                          <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Gigi {toothNum}</p>
-                                          <button 
-                                            onClick={() => setActivePeriodontalTooth(null)}
-                                            className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-slate-50 text-slate-400"
-                                          >
-                                            <X className="h-3 w-3" />
-                                          </button>
-                                        </div>
-                                        <div className="space-y-3">
-                                          {[
-                                            { id: "bleeding", label: "Bleeding on Probing (BOP)", color: "text-red-600", bg: "bg-red-50" },
-                                            { id: "pocketShallow", label: "Pocket > 4mm", color: "text-purple-600", bg: "bg-purple-50" },
-                                            { id: "attachmentLoss", label: "Attachment Loss > 1mm", color: "text-orange-600", bg: "bg-orange-50" },
-                                          ].map(cond => (
-                                            <label key={cond.id} className={cn(
-                                              "flex items-center justify-between gap-3 cursor-pointer p-3 rounded-2xl transition-all border-2",
-                                              !!toothData[cond.id as keyof typeof toothData] 
-                                                ? `border-blue-500 ${cond.bg} shadow-sm` 
-                                                : "border-slate-100 hover:border-slate-200 bg-white"
-                                            )}>
-                                              <span className={cn("text-[11px] font-black uppercase tracking-tight", cond.color)}>{cond.label}</span>
-                                              <input 
-                                                type="checkbox" 
-                                                checked={!!toothData[cond.id as keyof typeof toothData]}
-                                                onChange={(e) => {
-                                                  const newData = { ...toothData, [cond.id]: e.target.checked };
-                                                  setValue(`periodontal.teeth.${i}` as any, newData as any);
-                                                }}
-                                                className="h-5 w-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 transition-all"
-                                              />
-                                            </label>
-                                          ))}
-
-                                          <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                                  {/* Centered Modal for Periodontal Data */}
+                                  <AnimatePresence>
+                                    {activePeriodontalTooth === i && (
+                                      <>
+                                        {/* Backdrop */}
+                                        <motion.div 
+                                          initial={{ opacity: 0 }}
+                                          animate={{ opacity: 1 }}
+                                          exit={{ opacity: 0 }}
+                                          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100]" 
+                                          onClick={() => setActivePeriodontalTooth(null)}
+                                        />
+                                        
+                                        {/* Modal Content */}
+                                        <motion.div 
+                                          initial={{ opacity: 0, scale: 0.9, y: 20, x: "-50%" }}
+                                          animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
+                                          exit={{ opacity: 0, scale: 0.9, y: 20, x: "-50%" }}
+                                          style={{ top: "50%", left: "50%" }}
+                                          className="fixed -translate-x-1/2 -translate-y-1/2 w-full max-w-sm rounded-[2.5rem] bg-white p-8 shadow-[0_30px_100px_rgba(0,0,0,0.4)] border border-white/20 z-[110] max-h-[90vh] overflow-y-auto scrollbar-hide"
+                                        >
+                                          <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-50">
                                             <div>
-                                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                <div className="h-1 w-1 rounded-full bg-slate-300" />
-                                                Skor Kalkulus
-                                              </div>
-                                              <div className="grid grid-cols-4 gap-2">
-                                                {[0, 1, 2, 3].map(score => (
-                                                  <button
-                                                    key={score}
-                                                    type="button"
-                                                    onClick={() => {
-                                                      const newData = { ...toothData, calculus: score };
-                                                      setValue(`periodontal.teeth.${i}` as any, newData as any);
-                                                    }}
-                                                    className={cn(
-                                                      "h-10 rounded-xl text-xs font-black transition-all border-2",
-                                                      toothData.calculus === score 
-                                                        ? "bg-slate-800 text-white border-slate-800 shadow-lg scale-105" 
-                                                        : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
-                                                    )}
-                                                  >
-                                                    {score}
-                                                  </button>
-                                                ))}
-                                              </div>
+                                              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">DATA PERIODONTAL</p>
+                                              <h5 className="text-2xl font-black text-slate-900 leading-none">Gigi {toothNum}</h5>
                                             </div>
-
-                                            <div>
-                                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                <div className="h-1 w-1 rounded-full bg-yellow-400" />
-                                                Skor Stain
-                                              </div>
-                                              <div className="grid grid-cols-4 gap-2">
-                                                {[0, 1, 2, 3].map(score => (
-                                                  <button
-                                                    key={score}
-                                                    type="button"
-                                                    onClick={() => {
-                                                      const newData = { ...toothData, extrinsicStains: score };
-                                                      setValue(`periodontal.teeth.${i}` as any, newData as any);
-                                                    }}
-                                                    className={cn(
-                                                      "h-10 rounded-xl text-xs font-black transition-all border-2",
-                                                      toothData.extrinsicStains === score 
-                                                        ? "bg-yellow-600 text-white border-yellow-600 shadow-lg scale-105" 
-                                                        : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
-                                                    )}
-                                                  >
-                                                    {score}
-                                                  </button>
-                                                ))}
-                                              </div>
-                                            </div>
+                                            <button 
+                                              onClick={() => setActivePeriodontalTooth(null)}
+                                              className="h-10 w-10 flex items-center justify-center rounded-2xl bg-slate-50 hover:bg-red-50 hover:text-red-500 text-slate-400 transition-all active:scale-95"
+                                            >
+                                              <X className="h-5 w-5" />
+                                            </button>
                                           </div>
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
+                                          
+                                          <div className="space-y-6">
+                                            {/* Diagnostic Options */}
+                                            <div className="space-y-2">
+                                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Kondisi Klinis</p>
+                                              {[
+                                                { id: "bleeding", label: "BOP (Bleeding)", color: "text-red-500", bg: "bg-red-50", icon: "🔴" },
+                                                { id: "pocketShallow", label: "Pocket > 4mm", color: "text-purple-500", bg: "bg-purple-50", icon: "🟣" },
+                                                { id: "attachmentLoss", label: "Att. Loss > 1mm", color: "text-orange-500", bg: "bg-orange-50", icon: "🟠" },
+                                                { id: "mobility", label: "Kegoyangan (Mobility)", color: "text-red-800", bg: "bg-red-50", icon: "⏬" },
+                                                { id: "furcation", label: "Keterlibatan Furkasi", color: "text-blue-800", bg: "bg-blue-50", icon: "🔱" },
+                                              ].map(cond => (
+                                                <label key={cond.id} className={cn(
+                                                  "flex items-center justify-between gap-4 cursor-pointer p-4 rounded-2xl transition-all border-2",
+                                                  !!toothData[cond.id as keyof typeof toothData] 
+                                                    ? `border-blue-500 ${cond.bg} shadow-md` 
+                                                    : "border-slate-50 hover:border-slate-200 bg-white"
+                                                )}>
+                                                  <div className="flex items-center gap-3">
+                                                    <span className="text-lg">{cond.icon}</span>
+                                                    <span className={cn("text-xs font-black uppercase tracking-tight", cond.color)}>{cond.label}</span>
+                                                  </div>
+                                                  <div className={cn(
+                                                    "h-7 w-7 rounded-xl border-2 flex items-center justify-center transition-all",
+                                                    !!toothData[cond.id as keyof typeof toothData] ? "bg-blue-500 border-blue-500 text-white" : "bg-white border-slate-200"
+                                                  )}>
+                                                    {!!toothData[cond.id as keyof typeof toothData] && <CheckCircle2 className="h-4 w-4" />}
+                                                  </div>
+                                                  <input 
+                                                    type="checkbox" 
+                                                    className="hidden"
+                                                    checked={!!toothData[cond.id as keyof typeof toothData]}
+                                                    onChange={(e) => {
+                                                      const newData = { ...toothData, [cond.id]: e.target.checked };
+                                                      setValue(`periodontal.teeth.${i}` as any, newData as any);
+                                                    }}
+                                                  />
+                                                </label>
+                                              ))}
+                                            </div>
+
+                                            {/* Scoring Sections */}
+                                            <div className="pt-6 border-t border-slate-100 space-y-8">
+                                              <div>
+                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                  <Activity className="h-3 w-3" />
+                                                  Skor Kalkulus
+                                                </div>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                  {[0, 1, 2, 3].map(score => (
+                                                    <button
+                                                      key={score}
+                                                      type="button"
+                                                      onClick={() => {
+                                                        const newData = { ...toothData, calculus: score };
+                                                        setValue(`periodontal.teeth.${i}` as any, newData as any);
+                                                      }}
+                                                      className={cn(
+                                                        "h-14 rounded-2xl text-lg font-black transition-all border-2 shadow-sm",
+                                                        toothData.calculus === score 
+                                                          ? "bg-slate-900 text-white border-slate-900 shadow-xl scale-105" 
+                                                          : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
+                                                      )}
+                                                    >
+                                                      {score}
+                                                    </button>
+                                                  ))}
+                                                </div>
+                                              </div>
+
+                                              <div>
+                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                  <Activity className="h-3 w-3" />
+                                                  Skor Stain (Ekstrinsik)
+                                                </div>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                  {[0, 1, 2, 3].map(score => (
+                                                    <button
+                                                      key={score}
+                                                      type="button"
+                                                      onClick={() => {
+                                                        const newData = { ...toothData, extrinsicStains: score };
+                                                        setValue(`periodontal.teeth.${i}` as any, newData as any);
+                                                      }}
+                                                      className={cn(
+                                                        "h-14 rounded-2xl text-lg font-black transition-all border-2 shadow-sm",
+                                                        toothData.extrinsicStains === score 
+                                                          ? "bg-yellow-600 text-white border-yellow-600 shadow-xl scale-105" 
+                                                          : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
+                                                      )}
+                                                    >
+                                                      {score}
+                                                    </button>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            <button 
+                                              type="button"
+                                              onClick={() => setActivePeriodontalTooth(null)}
+                                              className="w-full py-5 rounded-3xl bg-blue-600 text-white font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
+                                            >
+                                              Selesai
+                                            </button>
+                                          </div>
+                                        </motion.div>
+                                      </>
+                                    )}
+                                  </AnimatePresence>
                                 </div>
                               </div>
                             );
@@ -1991,35 +2078,215 @@ function PatientHeader({ name }: { name: string }) {
   );
 }
 
-function ToothButton({ num, register, watch, setValue, isPrimary = false }: any) {
+function ToothButton({ num, watch, setValue, isPrimary = false, isActive, onToggle, onClose }: any) {
   const currentData = watch(`odontogram.${num}`) || { condition: "sou", surfaces: [], restoration: "", material: "" };
-  const condDetails = TOOTH_CONDITIONS.find(c => c.code === (currentData.condition || currentData));
+  const conditionCode = typeof currentData === 'string' ? currentData : (currentData.condition || "sou");
+  const condDetails = TOOTH_CONDITIONS.find(c => c.code === conditionCode);
   
+  const handleSurfaceToggle = (surface: string) => {
+    const surfaces = Array.isArray(currentData.surfaces) ? [...currentData.surfaces] : [];
+    const idx = surfaces.indexOf(surface);
+    if (idx > -1) surfaces.splice(idx, 1);
+    else surfaces.push(surface);
+    setValue(`odontogram.${num}`, { ...currentData, surfaces });
+  };
+
+  const setCondition = (code: string) => {
+    setValue(`odontogram.${num}`, { ...currentData, condition: code });
+  };
+
+  const setMaterial = (code: string) => {
+    setValue(`odontogram.${num}`, { ...currentData, material: code });
+  };
+
+  const setRestoration = (code: string) => {
+    setValue(`odontogram.${num}`, { ...currentData, restoration: code });
+  };
+
   return (
-    <div className="flex flex-col items-center gap-1">
-      {!isPrimary && <span className="text-[8px] font-black text-slate-400">{num}</span>}
+    <div className="flex flex-col items-center gap-1.5 relative">
+      {!isPrimary && <span className="text-[9px] font-black text-slate-400">{num}</span>}
       <button
         type="button"
-        onClick={() => {
-          const currentCond = currentData.condition || currentData;
-          const nextIdx = (TOOTH_CONDITIONS.findIndex(c => c.code === currentCond) + 1) % TOOTH_CONDITIONS.length;
-          const nextCond = TOOTH_CONDITIONS[nextIdx].code;
-          setValue(`odontogram.${num}`, { ...currentData, condition: nextCond });
-        }}
+        onClick={onToggle}
         className={cn(
-          "h-10 w-8 rounded-md border transition-all flex items-center justify-center text-[8px] font-black uppercase shadow-sm relative overflow-hidden",
-          condDetails?.color || "border-slate-200 bg-slate-50 text-slate-400",
-          isPrimary ? "h-8 w-6 rounded-sm border-dashed" : ""
+          "h-12 w-9 rounded-lg border-2 transition-all flex flex-col items-center justify-center text-[9px] font-black uppercase shadow-sm relative overflow-hidden group",
+          condDetails?.color || "border-slate-200 bg-white text-slate-400 hover:border-blue-400",
+          isPrimary ? "h-10 w-8 border-dashed" : "",
+          isActive && "ring-4 ring-blue-500/20 border-blue-600 z-10"
         )}
       >
-        <span className="relative z-10">{(currentData.condition || currentData) === "sou" ? "" : (currentData.condition || currentData)}</span>
-        {currentData.restoration && (
-          <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-            <div className="h-1 w-full bg-blue-500 rotate-45 absolute" />
+        <div className="relative z-10 w-full h-full flex items-center justify-center p-0.5">
+          {/* Surface Cross Diagram */}
+          <div className="relative w-full h-full grid grid-cols-3 grid-rows-3 gap-0 bg-white/50 rounded-sm">
+            {/* V - Top */}
+            <div className={cn("col-start-2 row-start-1 border", currentData.surfaces?.includes("V") ? "bg-red-500 border-red-600" : "border-slate-100")} />
+            {/* L - Bottom */}
+            <div className={cn("col-start-2 row-start-3 border", currentData.surfaces?.includes("L") ? "bg-red-500 border-red-600" : "border-slate-100")} />
+            {/* M - Left (approximate) */}
+            <div className={cn("col-start-1 row-start-2 border", currentData.surfaces?.includes("M") ? "bg-red-500 border-red-600" : "border-slate-100")} />
+            {/* D - Right (approximate) */}
+            <div className={cn("col-start-3 row-start-2 border", currentData.surfaces?.includes("D") ? "bg-red-500 border-red-600" : "border-slate-100")} />
+            {/* O - Center */}
+            <div className={cn("col-start-2 row-start-2 border", currentData.surfaces?.includes("O") ? "bg-red-500 border-red-600" : "border-slate-100")} />
           </div>
+
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className={cn("text-[8px] font-black drop-shadow-sm", (conditionCode === "nvt" || conditionCode === "mis") ? "text-white" : "text-slate-900")}>
+              {condDetails?.symbol || ""}
+            </span>
+          </div>
+        </div>
+        
+        {/* Visual indicators for filling/restoration */}
+        {currentData.material && (
+          <div className={cn("absolute inset-0 opacity-20", RESTORATION_MATERIALS.find(m => m.code === currentData.material)?.color)} />
+        )}
+        {currentData.restoration && (
+          <div className="absolute top-0 right-0 h-2 w-2 bg-blue-500 rounded-bl-sm" />
         )}
       </button>
-      {isPrimary && <span className="text-[8px] font-black text-blue-400">{num}</span>}
+      {isPrimary && <span className="text-[9px] font-black text-blue-400">{num}</span>}
+
+      {isActive && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={onClose} />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-80 rounded-[2.5rem] bg-white p-8 shadow-[0_25px_60px_rgba(0,0,0,0.3)] border-2 border-slate-50 z-50 animate-in fade-in zoom-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between mb-8 border-b border-slate-50 pb-4">
+              <div>
+                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Odontogram</p>
+                <h5 className="text-xl font-black text-slate-900 leading-none">Gigi {num}</h5>
+              </div>
+              <button 
+                onClick={onClose}
+                className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-8 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {/* Condition Select */}
+              <section>
+                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                  Kondisi Gigi
+                </h6>
+                <div className="grid grid-cols-2 gap-2">
+                  {TOOTH_CONDITIONS.map(c => (
+                    <button
+                      key={c.code}
+                      onClick={() => setCondition(c.code)}
+                      className={cn(
+                        "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
+                        conditionCode === c.code 
+                          ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md" 
+                          : "border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200"
+                      )}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {/* Surface Select */}
+              <section>
+                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Permukaan (Surfaces)
+                </h6>
+                <div className="flex flex-wrap gap-2">
+                  {["M", "O", "D", "V", "L"].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => handleSurfaceToggle(s)}
+                      className={cn(
+                        "h-12 w-12 rounded-2xl text-xs font-black transition-all border-2",
+                        currentData.surfaces?.includes(s)
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-lg scale-110" 
+                          : "bg-slate-50 text-slate-400 border-transparent hover:border-slate-200"
+                      )}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {/* Material Select */}
+              <section>
+                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  Bahan Restorasi (Filling)
+                </h6>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setMaterial("")}
+                    className={cn(
+                      "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
+                      !currentData.material 
+                        ? "border-slate-900 bg-slate-900 text-white" 
+                        : "border-slate-50 bg-slate-50 text-slate-400"
+                    )}
+                  >
+                    None
+                  </button>
+                  {RESTORATION_MATERIALS.map(m => (
+                    <button
+                      key={m.code}
+                      onClick={() => setMaterial(m.code)}
+                      className={cn(
+                        "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
+                        currentData.material === m.code 
+                          ? "border-amber-600 bg-amber-50 text-amber-700 shadow-md" 
+                          : "border-slate-50 bg-slate-50 text-slate-400"
+                      )}
+                    >
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {/* Restoration/Prosthetic Select */}
+              <section>
+                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                  Restorasi / Protesa
+                </h6>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => { setRestoration(""); }}
+                    className={cn(
+                      "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
+                      !currentData.restoration 
+                        ? "border-slate-900 bg-slate-900 text-white" 
+                        : "border-slate-50 bg-slate-50 text-slate-400"
+                    )}
+                  >
+                    None
+                  </button>
+                  {[...RESTORATIONS, ...PROSTHETICS].map(r => (
+                    <button
+                      key={r.code}
+                      onClick={() => setRestoration(r.code)}
+                      className={cn(
+                        "p-3 rounded-2xl text-[10px] font-black uppercase text-left border-2 transition-all",
+                        currentData.restoration === r.code 
+                          ? "border-purple-600 bg-purple-50 text-purple-700 shadow-md" 
+                          : "border-slate-50 bg-slate-50 text-slate-400"
+                      )}
+                    >
+                      {r.name}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

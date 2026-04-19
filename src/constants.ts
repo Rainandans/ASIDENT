@@ -199,48 +199,48 @@ export const HUMAN_NEEDS = [
 ];
 
 export const TOOTH_CONDITIONS = [
-  { code: "sou", name: "Sehat/Normal", color: "bg-green-100 border-green-500" },
-  { code: "non", name: "Gigi tidak ada/tidak diketahui", color: "bg-gray-200 border-gray-400" },
-  { code: "une", name: "Un-erupted", color: "bg-blue-50 border-blue-300" },
-  { code: "pre", name: "Partial erupted", color: "bg-blue-100 border-blue-400" },
-  { code: "imv", name: "Impacted visible", color: "bg-indigo-100 border-indigo-400" },
-  { code: "ano", name: "Anomali", color: "bg-purple-100 border-purple-400" },
-  { code: "dia", name: "Diastema", color: "bg-yellow-50 border-yellow-300" },
-  { code: "att", name: "Atrisi", color: "bg-orange-100 border-orange-400" },
-  { code: "abr", name: "Abrasi", color: "bg-orange-200 border-orange-500" },
-  { code: "car", name: "Caries/Karies", color: "bg-red-100 border-red-500 text-red-700" },
-  { code: "cfr", name: "Crown fracture", color: "bg-red-200 border-red-600" },
-  { code: "nvt", name: "Non vital", color: "bg-black text-white border-black" },
-  { code: "rrx", name: "Sisa akar", color: "bg-yellow-100 border-yellow-500" },
-  { code: "mis", name: "Gigi hilang", color: "bg-gray-300 border-gray-500" },
+  { code: "sou", name: "Sehat/Normal", color: "bg-green-100 border-green-500", symbol: "" },
+  { code: "non", name: "Gigi tidak ada/tidak diketahui", color: "bg-gray-100 border-gray-300", symbol: "NON" },
+  { code: "une", name: "Un-erupted", color: "bg-blue-50 border-blue-200", symbol: "UNE" },
+  { code: "pre", name: "Partial erupted", color: "bg-blue-100 border-blue-300", symbol: "PRE" },
+  { code: "imv", name: "Impacted visible", color: "bg-indigo-50 border-indigo-200", symbol: "IMV" },
+  { code: "ano", name: "Anomali", color: "bg-purple-50 border-purple-200", symbol: "ANO" },
+  { code: "dia", name: "Diastema", color: "bg-yellow-50 border-yellow-200", symbol: "DIA" },
+  { code: "att", name: "Atrisi", color: "bg-orange-50 border-orange-200", symbol: "ATT" },
+  { code: "abr", name: "Abrasi", color: "bg-orange-100 border-orange-300", symbol: "ABR" },
+  { code: "car", name: "Caries/Karies", color: "bg-red-50 border-red-500 text-red-700", symbol: "CAR" },
+  { code: "cfr", name: "Crown fracture", color: "bg-red-100 border-red-600", symbol: "CFR" },
+  { code: "nvt", name: "Non vital", color: "bg-slate-900 text-white border-slate-900", symbol: "NVT" },
+  { code: "rrx", name: "Sisa akar", color: "bg-yellow-100 border-yellow-400 text-yellow-800", symbol: "RRX" },
+  { code: "mis", name: "Gigi hilang", color: "bg-gray-300 border-gray-400 text-gray-700", symbol: "MIS" },
 ];
 
 export const RESTORATION_MATERIALS = [
-  { code: "amf", name: "Amalgam filling" },
-  { code: "gif", name: "GIC" },
-  { code: "cof", name: "Composite filling" },
-  { code: "fis", name: "Fissure sealant" },
-  { code: "inl", name: "Inlay" },
-  { code: "onl", name: "Onlay" },
+  { code: "amf", name: "Amalgam filling", color: "bg-slate-800", textColor: "text-white" },
+  { code: "gif", name: "GIC", color: "bg-slate-300", textColor: "text-slate-800" },
+  { code: "cof", name: "Composite filling", color: "bg-blue-100 border-blue-500", textColor: "text-blue-800" },
+  { code: "fis", name: "Fissure sealant", color: "bg-emerald-100", textColor: "text-emerald-800" },
+  { code: "inl", name: "Inlay", color: "bg-amber-100", textColor: "text-amber-800" },
+  { code: "onl", name: "Onlay", color: "bg-amber-200", textColor: "text-amber-900" },
 ];
 
 export const RESTORATIONS = [
-  { code: "fmc", name: "Full metal crown" },
-  { code: "poc", name: "Porcelain crown" },
-  { code: "mpc", name: "Metal porcelain crown" },
-  { code: "gmc", name: "Gold metal porcelain" },
-  { code: "ipx", name: "Implan" },
-  { code: "rct", name: "Root canal treatment" },
-  { code: "meb", name: "Metal bridge" },
-  { code: "pob", name: "Porcelain bridge" },
-  { code: "pon", name: "Pontic" },
-  { code: "abu", name: "Gigi abutment" },
+  { code: "fmc", name: "Full metal crown", symbol: "FMC" },
+  { code: "poc", name: "Porcelain crown", symbol: "POC" },
+  { code: "mpc", name: "Metal porcelain crown", symbol: "MPC" },
+  { code: "gmc", name: "Gold metal porcelain", symbol: "GMC" },
+  { code: "ipx", name: "Implan", symbol: "IPX" },
+  { code: "rct", name: "Root canal treatment", symbol: "RCT" },
+  { code: "meb", name: "Metal bridge", symbol: "MEB" },
+  { code: "pob", name: "Porcelain bridge", symbol: "POB" },
+  { code: "pon", name: "Pontic", symbol: "PON" },
+  { code: "abu", name: "Gigi abutment", symbol: "ABU" },
 ];
 
 export const PROSTHETICS = [
-  { code: "prd", name: "Partial denture" },
-  { code: "fld", name: "Full denture" },
-  { code: "acr", name: "Acrilic" },
+  { code: "prd", name: "Partial denture", symbol: "PRD" },
+  { code: "fld", name: "Full denture", symbol: "FLD" },
+  { code: "acr", name: "Acrilic", symbol: "ACR" },
 ];
 
 export const DENTAL_SERVICES = [

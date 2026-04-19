@@ -1,8 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const API_KEY = process.env.GEMINI_API_KEY || "";
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 export async function generatePatientSummary(patientData: any) {
+  if (!API_KEY) {
+    return "Layanan ringkasan AI belum dikonfigurasi. Hubungi administrator untuk mengatur kunci API.";
+  }
+
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `
@@ -30,6 +35,6 @@ export async function generatePatientSummary(patientData: any) {
     return response.text() || "Maaf, ringkasan tidak dapat dihasilkan.";
   } catch (error) {
     console.error("Error generating summary:", error);
-    return "Maaf, ringkasan otomatis tidak dapat dibuat saat ini. Silakan hubungi terapis gigi Anda.";
+    return "Maaf, ringkasan otomatis tidak dapat dibuat saat ini. Harap periksa koneksi atau coba lagi nanti.";
   }
 }
