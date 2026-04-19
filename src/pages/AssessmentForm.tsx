@@ -544,9 +544,9 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
   ];
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50 to-indigo-50/50 pb-20 no-print">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50 to-indigo-50/50 pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-6 py-4 no-print">
+      <header className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-6 py-4 no-print shadow-sm">
         <div className="mx-auto max-w-5xl flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
@@ -2068,10 +2068,14 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-10"
               >
-                <PatientHeader name={watch("demographics.fullName")} />
+                <div className="no-print">
+                  <PatientHeader name={watch("demographics.fullName")} />
+                </div>
                 
                 <div>
-                  <SectionHeader title="Ringkasan AI & Rekomendasi" icon={Sparkles} />
+                  <div className="no-print">
+                    <SectionHeader title="Ringkasan AI & Rekomendasi" icon={Sparkles} />
+                  </div>
                   <div className="mt-6 space-y-6 rounded-[2rem] bg-white p-10 border border-slate-100 shadow-xl shadow-blue-900/5">
                     {!aiSummary ? (
                       <div className="flex flex-col items-center justify-center py-10 text-center">
@@ -2107,13 +2111,13 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                         </button>
                       </div>
                     ) : (
-                        <div id="printable-summary" className="space-y-6 text-left">
+                        <div id="printable-summary" className="space-y-6 text-left break-inside-avoid">
                           {/* Print Only Header */}
-                          <div className="print-only mb-10 pb-6 border-b-2 border-slate-200 hidden print:block">
+                          <div className="print-only mb-10 pb-6 border-b-2 border-slate-200 hidden print:block text-left">
                             <div className="flex items-center justify-between mb-8">
-                              <div>
-                                <h1 className="text-3xl font-black text-slate-900 leading-none mb-2">LAPORAN KESEHATAN GIGI</h1>
-                                <p className="text-sm font-bold text-blue-600 tracking-widest uppercase">Klinik ASIDENT - Aplikasi Dental Asuhan Terpadu</p>
+                              <div className="text-left">
+                                <h1 className="text-3xl font-black text-slate-900 leading-none mb-2 text-left">LAPORAN KESEHATAN GIGI</h1>
+                                <p className="text-sm font-bold text-blue-600 tracking-widest uppercase text-left">Klinik ASIDENT - Aplikasi Dental Asuhan Terpadu</p>
                               </div>
                               <div className="text-right">
                                 <p className="text-xl font-bold text-slate-900">{watch("demographics.fullName")}</p>
@@ -2127,7 +2131,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                                <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
                                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Laporan Pasien (AI Generated)</span>
                             </div>
-                            <div className="whitespace-pre-wrap font-medium">
+                            <div className="whitespace-pre-wrap font-medium text-left">
                               {aiSummary}
                             </div>
                           </div>
@@ -2136,7 +2140,8 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                               <button 
                                 type="button"
                                 onClick={() => {
-                                  setTimeout(() => window.print(), 100);
+                                  window.focus();
+                                  setTimeout(() => window.print(), 50);
                                 }}
                                 className="flex items-center gap-2 rounded-2xl bg-slate-900 px-8 py-4 text-sm font-black text-white hover:bg-slate-800 transition-all shadow-lg active:scale-95"
                               >
@@ -2158,9 +2163,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                   </div>
                 </div>
 
-                <div>
+                <div className="no-print">
                   <SectionHeader title="Rincian Biaya & Tindakan" icon={CreditCard} />
-                  <div className="mt-6 space-y-6 rounded-[2rem] bg-white p-10 border border-slate-100 shadow-xl shadow-blue-900/5">
+                </div>
+                <div className="mt-6 space-y-6 rounded-[2rem] bg-white p-10 border border-slate-100 shadow-xl shadow-blue-900/5 no-print">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {DENTAL_SERVICES.map(service => (
                         <label 
@@ -2210,7 +2216,6 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                       </div>
                     </div>
                   </div>
-                </div>
               </motion.div>
             )}
           </AnimatePresence>

@@ -82,16 +82,23 @@
 
   /* Target the specific summary container */
   #printable-summary {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative !important;
     width: 100%;
     margin: 0;
-    padding: 40px;
+    padding: 20px;
     border: none !important;
     box-shadow: none !important;
     background: white !important;
     color: black !important;
+  }
+
+  #printable-summary .prose {
+    background: white !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    max-width: none !important;
   }
 
   /* Ensure text is readable */
