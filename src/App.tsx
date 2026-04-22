@@ -1,3 +1,4 @@
+// Force build update: 2026-04-19 12:24
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
