@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import SignatureCanvas from "react-signature-canvas";
 import { generatePatientSummary } from "../services/gemini";
-import { db, collection, addDoc, getDocs, query, where, doc, updateDoc, onSnapshot } from "../lib/firebase";
+import { db, collection, addDoc, getDocs, query, where, doc, updateDoc, setDoc, onSnapshot } from "../lib/firebase";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -209,7 +209,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isExistingPatient, setIsExistingPatient] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [activePeriodontalTooth, setActivePeriodontalTooth] = useState<number | null>(null);
   const [activeOdontogramTooth, setActiveOdontogramTooth] = useState<number | null>(null);
@@ -349,12 +349,12 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
 
     try {
       if (editingId) {
-        // Update existing
+        // Update existing using setDoc with merge:true to be more resilient
         console.log("Updating assessment:", editingId);
-        await updateDoc(doc(db, "assessments", editingId.toString()), {
+        await setDoc(doc(db, "assessments", editingId), {
           ...finalData,
           updatedAt: new Date().toISOString()
-        });
+        }, { merge: true });
       } else {
         // Save New Assessment
         console.log("Creating new assessment document...");

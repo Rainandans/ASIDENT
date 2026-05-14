@@ -154,10 +154,10 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
 
     try {
       if (editingId) {
-        await updateDoc(doc(db, "appointments", editingId), {
+        await setDoc(doc(db, "appointments", editingId), {
           ...finalApp,
           updatedAt: new Date().toISOString()
-        });
+        }, { merge: true });
       } else {
         await addDoc(collection(db, "appointments"), finalApp);
       }
