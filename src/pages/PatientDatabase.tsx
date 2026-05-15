@@ -105,9 +105,11 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
     setSelectedPatient({ fullName, phone });
   };
 
-  const handleDelete = async (id: string, fullName: string, date: string) => {
-    const formattedDate = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-    if (window.confirm(`PERINGATAN: Anda akan menghapus data rekam medis untuk:\n\nPasien: ${fullName}\nTanggal: ${formattedDate}\n\nApakah Anda yakin? Tindakan ini tidak dapat dibatalkan.`)) {
+  const handleDelete = async (id: string, fullName: string, date: string, examiner: string, updatedAt?: string) => {
+    const formattedDate = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const formattedUpdate = updatedAt ? new Date(updatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Tidak ada';
+    
+    if (window.confirm(`PERINGATAN KERAS: Anda akan menghapus data rekam medis.\n\nPasien: ${fullName}\nTanggal Input: ${formattedDate}\nTerakhir Update: ${formattedUpdate}\nDokter/Pemeriksa: ${examiner}\nID: ${id}\n\nApakah Anda YAKIN? Tindakan ini permanen.`)) {
       try {
         console.log("Deleting document:", id);
         await deleteDoc(doc(db, "assessments", id));
@@ -263,7 +265,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                         EDIT / LIHAT DATA
                       </button>
                       <button 
-                        onClick={() => handleDelete(a.id, a.demographics?.fullName || 'Tanpa Nama', a.createdAt)}
+                        onClick={() => handleDelete(a.id, a.demographics?.fullName || 'Tanpa Nama', a.createdAt, a.examiner || 'Tidak Diketahui', a.updatedAt)}
                         className="rounded-xl bg-red-50 p-2 text-red-500 hover:bg-red-100 transition-all"
                       >
                         <Trash2 className="h-5 w-5" />

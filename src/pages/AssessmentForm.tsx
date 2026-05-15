@@ -269,6 +269,9 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
           // Only reset if draft actually has content
           if (parsed.demographics?.fullName || parsed.healthHistory?.dental?.reason) {
             reset(parsed);
+            if (parsed.id) {
+              setEditingId(parsed.id);
+            }
           }
         } catch (e) {
           console.error("Failed to parse draft", e);
@@ -350,10 +353,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     try {
       if (editingId) {
         // Update existing using setDoc with merge:true to be more resilient
-        console.log("Updating assessment:", editingId);
+        console.log("Updating assessment with ID:", editingId);
         
-        // Remove createdAt from the data being sent to ensure we never overwrite the original creation date
-        const { createdAt, ...dataToUpdate } = finalData;
+        // Remove id and createdAt from the data being sent to the body
+        const { id, createdAt, ...dataToUpdate } = finalData;
         
         await setDoc(doc(db, "assessments", editingId), {
           ...dataToUpdate,
@@ -468,10 +471,17 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         const p = { id: doc.id, ...doc.data() } as any;
         if (!p.demographics) return;
         
-        const exists = uniquePatients.find(up => up.demographics?.fullName === p.demographics?.fullName);
-        if (!exists) {
-          if (p.demographics.fullName.toLowerCase().includes(term.toLowerCase()) || p.demographics.phone.includes(term)) {
+        if (p.demographics.fullName.toLowerCase().includes(term.toLowerCase()) || p.demographics.phone.includes(term)) {
+          const existingIndex = uniquePatients.findIndex(up => up.demographics?.fullName === p.demographics?.fullName);
+          if (existingIndex === -1) {
             uniquePatients.push(p);
+          } else {
+            // Keep the most recent one
+            const existingTime = new Date(uniquePatients[existingIndex].createdAt).getTime();
+            const currentTime = new Date(p.createdAt).getTime();
+            if (currentTime > existingTime) {
+              uniquePatients[existingIndex] = p;
+            }
           }
         }
       });
@@ -482,8 +492,18 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     }
   };
 
-  const selectPatient = (patient: any) => {
-    // Fill demographics and history
+  const selectPatient = (patient: any, isResume: boolean = false) => {
+    if (isResume) {
+      console.log("Resuming existing assessment:", patient.id);
+      setEditingId(patient.id);
+      reset(patient);
+      setIsExistingPatient(true);
+      setSearchResults([]);
+      setSearchTerm("");
+      return;
+    }
+
+    // Fill demographics and history for NEW visit
     setValue("demographics", patient.demographics);
     if (patient.healthHistory) {
       setValue("healthHistory", patient.healthHistory);
@@ -670,18 +690,37 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                       {searchResults.length > 0 && (
                         <div className="absolute z-30 mt-2 w-full max-w-md overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl">
                           {searchResults.map((p, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => selectPatient(p)}
-                              className="flex w-full items-center justify-between border-b border-slate-50 p-4 text-left hover:bg-blue-50 transition-colors"
-                            >
-                              <div>
-                                <p className="font-bold text-slate-900">{p.demographics?.fullName || "Tanpa Nama"}</p>
-                                <p className="text-xs text-slate-500">{p.demographics?.phone} • {p.demographics?.age} Thn</p>
+                            <div key={i} className="flex w-full flex-col border-b border-slate-50 p-4 hover:bg-slate-50 transition-colors">
+                              <div className="flex items-center justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-slate-900">{p.demographics?.fullName || "Tanpa Nama"}</p>
+                                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                                    Pemeriksaan Terakhir: {new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{p.demographics?.phone}</p>
+                                </div>
                               </div>
-                              <Plus className="h-4 w-4 text-blue-500" />
-                            </button>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => selectPatient(p, true)}
+                                  className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-blue-600 py-2.5 text-[10px] font-black text-white hover:bg-blue-700 transition-all uppercase tracking-widest"
+                                >
+                                  <RefreshCw className="h-3 w-3" />
+                                  Lanjutkan/Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => selectPatient(p, false)}
+                                  className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-slate-100 py-2.5 text-[10px] font-black text-slate-600 hover:bg-slate-200 transition-all uppercase tracking-widest border border-slate-200"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                  Kunjungan Baru
+                                </button>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       )}
