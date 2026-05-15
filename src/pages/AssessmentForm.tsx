@@ -351,8 +351,12 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       if (editingId) {
         // Update existing using setDoc with merge:true to be more resilient
         console.log("Updating assessment:", editingId);
+        
+        // Remove createdAt from the data being sent to ensure we never overwrite the original creation date
+        const { createdAt, ...dataToUpdate } = finalData;
+        
         await setDoc(doc(db, "assessments", editingId), {
-          ...finalData,
+          ...dataToUpdate,
           updatedAt: new Date().toISOString()
         }, { merge: true });
       } else {

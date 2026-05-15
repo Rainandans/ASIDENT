@@ -44,11 +44,16 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
       snapshot.forEach((doc) => {
         data.push({ id: doc.id, ...doc.data() });
       });
-      // Sort by createdAt descending
+      // Sort by createdAt descending, use ID as secondary sort to ensure stability
       data.sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
+        
+        if (dateB !== dateA) {
+          return dateB - dateA;
+        }
+        // Force stable sort for items with identical timestamps
+        return (b.id || "").localeCompare(a.id || "");
       });
       setAssessments(data);
     }, (error) => {
@@ -100,12 +105,15 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
     setSelectedPatient({ fullName, phone });
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus data ini?")) {
+  const handleDelete = async (id: string, fullName: string, date: string) => {
+    const formattedDate = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    if (window.confirm(`PERINGATAN: Anda akan menghapus data rekam medis untuk:\n\nPasien: ${fullName}\nTanggal: ${formattedDate}\n\nApakah Anda yakin? Tindakan ini tidak dapat dibatalkan.`)) {
       try {
+        console.log("Deleting document:", id);
         await deleteDoc(doc(db, "assessments", id));
       } catch (error) {
         console.error("Error deleting assessment:", error);
+        alert("Gagal menghapus data. Silakan coba lagi.");
       }
     }
   };
@@ -115,7 +123,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
       (a.demographics?.fullName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (a.demographics?.phone || "").includes(searchTerm);
     return matchesSearch;
-  });
+  }).slice(0, filterRole === "recent" ? 10 : undefined);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -255,7 +263,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                         EDIT / LIHAT DATA
                       </button>
                       <button 
-                        onClick={() => handleDelete(a.id)}
+                        onClick={() => handleDelete(a.id, a.demographics?.fullName || 'Tanpa Nama', a.createdAt)}
                         className="rounded-xl bg-red-50 p-2 text-red-500 hover:bg-red-100 transition-all"
                       >
                         <Trash2 className="h-5 w-5" />

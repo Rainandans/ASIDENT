@@ -154,8 +154,10 @@ export default function AppointmentPage({ user, onLogout }: { user: { name: stri
 
     try {
       if (editingId) {
+        // Remove createdAt to ensure original date is preserved
+        const { createdAt, ...dataToUpdate } = finalApp;
         await setDoc(doc(db, "appointments", editingId), {
-          ...finalApp,
+          ...dataToUpdate,
           updatedAt: new Date().toISOString()
         }, { merge: true });
       } else {
