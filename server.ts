@@ -80,8 +80,9 @@ async function startServer() {
         HASIL OUTPUT (Langsung ke ringkasan):
       `;
 
+      // Correct usage for @google/genai
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash", 
         contents: prompt,
       });
 

@@ -46,8 +46,8 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
       });
       // Sort by createdAt descending, use ID as secondary sort to ensure stability
       data.sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        const dateA = new Date(a.createdAt || a.header?.visitDate || 0).getTime();
+        const dateB = new Date(b.createdAt || b.header?.visitDate || 0).getTime();
         
         // Handle Invalid Date (NaN)
         const timeA = isNaN(dateA) ? 0 : dateA;
@@ -236,8 +236,10 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                           <Calendar className="h-4 w-4" />
                           {a.createdAt && !isNaN(new Date(a.createdAt).getTime()) ? (
                             new Date(a.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                          ) : a.header?.visitDate ? (
+                            new Date(a.header.visitDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                           ) : (
-                            <span className="text-red-500 font-bold italic">Tgl Tidak Valid</span>
+                            <span className="text-amber-500 font-bold italic">Tanpa Tanggal</span>
                           )}
                         </div>
                         <div className="flex items-center gap-1">

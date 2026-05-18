@@ -218,7 +218,10 @@ const INITIAL_FORM_STATE = {
     date: "",
     notes: "",
     recommendation: ""
-  }
+  },
+  createdAt: "",
+  updatedAt: "",
+  id: ""
 };
 
 export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) {
@@ -263,7 +266,8 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       
       if (location.state.isEditing) {
         setEditingId(pData.id || null);
-        reset(pData);
+        console.log("Setting editingId:", pData.id);
+        reset({ ...pData });
       } else {
         selectPatient(pData);
       }
@@ -388,21 +392,22 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
 
     try {
       if (editingId) {
-        // Update existing using updateDoc to ensure fields are actually modified
+        // Update existing using setDoc with merge:true to be more resilient
         console.log("Updating assessment with ID:", editingId);
         
-        // We explicitly remove internal fields that should NOT be modified
-        // We ensure createdAt is preserved by NOT including it in updateDoc
-        const { id, createdAt, ...dataToUpdate } = finalData;
+        // Ensure we preserve the original createdAt from the form data if it exists
+        const originalCreatedAt = data.createdAt || data.header?.visitDate;
+        
+        // Remove internal id but NOT createdAt from the data being sent
+        const { id, ...dataToUpdate } = finalData;
         
         const docRef = doc(db, "assessments", editingId);
         
-        // Use setDoc with { merge: true } as it's more forgiving on nested updates if needed,
-        // but here updateDoc is fine since we know it exists.
-        // Actually, let's use setDoc with merge: true to avoid "No document to update" errors
-        // and ensure we don't accidentally wipe out fields if somehow they were missing in the form.
+        // We use setDoc with merge: true but we explicitly include createdAt 
+        // to be absolutely sure it's not lost if the doc is somehow corrupted
         await setDoc(docRef, {
           ...dataToUpdate,
+          createdAt: originalCreatedAt || new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }, { merge: true });
         
@@ -2402,7 +2407,9 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
 }
 
 function PatientHeader({ name, date }: { name: string; date?: string }) {
-  const displayDate = date ? new Date(date) : new Date();
+  // Try multiple date sources
+  const dateStr = date || new Date().toISOString();
+  const displayDate = new Date(dateStr);
   const isValidDate = !isNaN(displayDate.getTime());
   
   return (
@@ -2415,7 +2422,7 @@ function PatientHeader({ name, date }: { name: string; date?: string }) {
       <div className="text-right relative z-10">
         <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70">Tanggal Pengisian</p>
         <h3 className="text-xl font-bold">
-          {isValidDate ? displayDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : "Tanggal Tidak Valid"}
+          {isValidDate ? displayDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : "Tanggal Belum Terdaftar"}
         </h3>
       </div>
     </div>
