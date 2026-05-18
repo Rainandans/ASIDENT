@@ -82,17 +82,17 @@ async function startServer() {
         HASIL OUTPUT (Langsung ke ringkasan):
       `;
 
+      // Use generateContent directly and await response text
       const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const output = response.text();
+      const text = result.response.text();
 
       console.log("AI summary generated successfully.");
-      res.json({ text: output });
+      res.json({ text });
     } catch (error: any) {
       console.error("Gemini Error:", error);
       res.status(500).json({ 
-        error: "Gagal memproses AI: " + (error.message || "Internal Server Error"),
-        details: error.toString()
+        error: "Gagal memproses AI: " + (error.message || "Unknown error"),
+        details: error.stack || error.toString()
       });
     }
   });

@@ -356,7 +356,11 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     
     return Object.fromEntries(
       Object.entries(obj)
-        .filter(([_, v]) => v !== undefined && typeof v !== 'function')
+        .filter(([k, v]) => {
+          // Keep important keys even if they look like internal fields
+          if (k === "id" || k === "uid") return true;
+          return v !== undefined && typeof v !== 'function';
+        })
         .map(([k, v]) => [k, sanitizeData(v)])
     );
   };
@@ -391,74 +395,67 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     });
 
     try {
-      // Robust ID detection
+      // Robust ID detection - prioritize explicit editingId state
       const idToUpdate = editingId || data.id || formData.id || finalData.id;
       const now = new Date().toISOString();
+      const todayStr = new Date().toISOString().split('T')[0];
 
       console.log("Submit logic - idToUpdate:", idToUpdate, "isEditing:", !!editingId);
 
-      if (idToUpdate && idToUpdate !== "" && idToUpdate !== "null" && idToUpdate !== "undefined" && typeof idToUpdate === "string") {
-        // Update existing using setDoc with merge:true
-        console.log("Updating existing assessment with ID:", idToUpdate);
+      // FAIL-SAFE: Even if idToUpdate is missing, check if this patient already has a record for TODAY
+      let targetDocId = idToUpdate && typeof idToUpdate === "string" && idToUpdate.length > 5 ? idToUpdate : null;
+      
+      if (!targetDocId) {
+        console.log("No specific ID to update, checking for same-day record for patient:", finalData.demographics?.fullName);
+        const q = query(
+          collection(db, "assessments"), 
+          where("demographics.fullName", "==", finalData.demographics?.fullName)
+        );
+        const existingSnapshot = await getDocs(q);
+        
+        existingSnapshot.forEach(docSnap => {
+          const d = docSnap.data();
+          // Check if date matches today (either via createdAt or visitDate)
+          const dDate = (d.createdAt || d.header?.visitDate || "").split('T')[0];
+          if (dDate === todayStr) {
+            console.log("FOUND EXISTING RECORD FOR TODAY, MAPPING TO ID:", docSnap.id);
+            targetDocId = docSnap.id;
+          }
+        });
+      }
+
+      if (targetDocId && targetDocId !== "null" && targetDocId !== "undefined") {
+        // Update existing record
+        console.log("UPDATING record:", targetDocId);
         
         const { id, createdAt, updatedAt, ...cleanData } = finalData;
-        
-        const docRef = doc(db, "assessments", idToUpdate);
+        const docRef = doc(db, "assessments", targetDocId);
         
         await setDoc(docRef, {
           ...cleanData,
           updatedAt: now
         }, { merge: true });
         
-        console.log("Update successful for ID:", idToUpdate);
-        alert("BERHASIL diperbarui! Data lama telah diperbarui dengan data baru (Tidak ada duplikasi).");
+        setEditingId(targetDocId); // Ensure state is synced
+        console.log("Update successful for ID:", targetDocId);
+        alert("DATA DIPERBARUI: Data pasien ini sudah ada dan telah diperbarui otomatis agar tidak duplikat.");
       } else {
-        // Double check if a record for this patient and today already exists to prevent duplicate on rapid clicks or lost ID
-        console.log("Checking for potential duplicate before creating new record...");
-        const todayStr = new Date().toISOString().split('T')[0];
-        const q = query(
-          collection(db, "assessments"), 
-          where("demographics.fullName", "==", finalData.demographics?.fullName),
-          where("examinerUid", "==", user.uid)
-        );
-        const existingSnapshot = await getDocs(q);
+        // Save New Assessment
+        console.log("CREATING new record...");
         
-        let duplicateDocId = null;
-        existingSnapshot.forEach(doc => {
-          const d = doc.data();
-          const dDate = (d.createdAt || d.header?.visitDate || "").split('T')[0];
-          if (dDate === todayStr) {
-            duplicateDocId = doc.id;
-          }
-        });
-
-        if (duplicateDocId) {
-          console.log("Duplicate found for today, updating instead of creating:", duplicateDocId);
-          const { id, createdAt, updatedAt, ...cleanData } = finalData;
-          await setDoc(doc(db, "assessments", duplicateDocId), {
-            ...cleanData,
-            updatedAt: now
-          }, { merge: true });
-          setEditingId(duplicateDocId);
-          alert("Data Anda sudah ada untuk hari ini, sistem otomatis memperbarui data tersebut agar tidak duplikat.");
-        } else {
-          // Save New Assessment
-          console.log("Creating new assessment recording...");
-          
-          const { id, createdAt, updatedAt, ...newRecordData } = finalData;
-          
-          const newDoc = {
-            ...newRecordData,
-            examiner: user.name,
-            createdAt: now,
-            updatedAt: now
-          };
-          
-          const docRef = await addDoc(collection(db, "assessments"), newDoc);
-          setEditingId(docRef.id); 
-          console.log("Assessment saved successfully with new ID:", docRef.id);
-          alert("BERHASIL: Data rekam medis baru telah disimpan.");
-        }
+        const { id, createdAt, updatedAt, ...newRecordData } = finalData;
+        
+        const newDoc = {
+          ...newRecordData,
+          examiner: user.name,
+          createdAt: now,
+          updatedAt: now
+        };
+        
+        const docRef = await addDoc(collection(db, "assessments"), newDoc);
+        setEditingId(docRef.id); 
+        console.log("New record created with ID:", docRef.id);
+        alert("DATA DISIMPAN: Rekam medis baru telah berhasil dibuat.");
       }
 
       // Clear draft after successful save
