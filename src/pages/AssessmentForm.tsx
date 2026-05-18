@@ -270,9 +270,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       const pData = location.state.patientData;
       
       if (location.state.isEditing) {
-        setEditingId(pData.id || null);
-        console.log("Setting editingId for edit mode:", pData.id);
-        reset({ ...pData, id: pData.id });
+        const idToSet = pData.id || pData.uid;
+        setEditingId(idToSet);
+        console.log("AssessmentForm: Entering EDIT mode for ID:", idToSet);
+        reset({ ...pData, id: idToSet });
         // Clear draft when explicitly editing to avoid conflicts
         localStorage.removeItem("asident_assessment_draft");
       } else {
@@ -398,22 +399,21 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       setIsSubmitting(true);
       
       const formData = watch();
-      // Robust ID detection - prioritize explicit editingId state
-      const idToUpdate = editingId || data.id || formData.id || finalData.id;
+      const idToUpdate = editingId || data.id || finalData.id;
       const now = new Date().toISOString();
       const todayStr = new Date().toISOString().split('T')[0];
 
-      console.log("SUBMIT START - editingId state:", editingId);
-      console.log("SUBMIT START - data.id:", data.id);
-      console.log("SUBMIT START - formData.id:", formData.id);
-      console.log("SUBMIT START - finalData.id:", finalData.id);
-      console.log("SUBMIT START - Resolved idToUpdate:", idToUpdate);
+      console.log("SUBMIT LOG - editingId state:", editingId);
+      console.log("SUBMIT LOG - Resolved idToUpdate:", idToUpdate);
 
-      // FAIL-SAFE: Even if idToUpdate is missing, check if this patient already has a record for TODAY
-      let targetDocId = idToUpdate && typeof idToUpdate === "string" && idToUpdate.length > 5 && idToUpdate !== "null" && idToUpdate !== "undefined" ? idToUpdate : null;
+      // DECISION LOGIC: 
+      // 1. If we have an explicit ID from editingId, we ALWAYS update that specific record.
+      // 2. If we don't have an ID, we check if this patient has a record TODAY to avoid accidental duplication.
+      
+      let targetDocId = (editingId && editingId !== "null") ? editingId : null;
       
       if (!targetDocId) {
-        console.log("No specific ID found in state, checking database for same-day record for patient:", finalData.demographics?.fullName);
+        console.log("No editing session active, checking for same-day record for patient:", finalData.demographics?.fullName);
         const q = query(
           collection(db, "assessments"), 
           where("demographics.fullName", "==", finalData.demographics?.fullName)
@@ -422,10 +422,9 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         
         existingSnapshot.forEach(docSnap => {
           const d = docSnap.data();
-          // Check if date matches today (either via createdAt or visitDate or header.visitDate)
           const dDate = (d.createdAt || d.header?.visitDate || d.visitDate || "").split('T')[0];
           if (dDate === todayStr) {
-            console.log("MATCH FOUND IN DB FOR TODAY:", docSnap.id);
+            console.log("DUPLICATE FOUND: Patient already has a record for today. Re-using ID:", docSnap.id);
             targetDocId = docSnap.id;
           }
         });
@@ -433,7 +432,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
 
       if (targetDocId) {
         // Update existing record
-        console.log("DECISION: UPDATING record with ID:", targetDocId);
+        console.log("ACTION: Updating existing record:", targetDocId);
         
         const { id, createdAt, updatedAt, ...cleanData } = finalData;
         const docRef = doc(db, "assessments", targetDocId);
@@ -448,7 +447,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         alert("BERHASIL: Data rekam medis telah diperbarui (ID: " + targetDocId + ").");
       } else {
         // Save New Assessment
-        console.log("DECISION: CREATING NEW record...");
+        console.log("ACTION: Creating NEW record...");
         
         const { id, createdAt, updatedAt, ...newRecordData } = finalData;
         

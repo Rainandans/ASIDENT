@@ -9,11 +9,6 @@ dotenv.config();
 // Initialize the modern @google/genai SDK
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || "",
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
 });
 
 async function startServer() {
@@ -23,6 +18,14 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
 
   // API Routes
+  app.get("/api/ai/status", (req, res) => {
+    res.json({ 
+      configured: !!process.env.GEMINI_API_KEY,
+      sdk: "modern",
+      model: "gemini-2.0-flash"
+    });
+  });
+
   app.post("/api/ai/summary", async (req, res) => {
     const { patientData } = req.body;
     
@@ -88,13 +91,13 @@ async function startServer() {
         HASIL OUTPUT (Langsung ke ringkasan):
       `;
 
-      // Use the correct @google/genai syntax
+      // Use the correct @google/genai syntax with gemini-2.0-flash
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
-      const text = response.text; // Property, not method
+      const text = response.text; 
 
       console.log("AI summary generated successfully.");
       res.json({ text });

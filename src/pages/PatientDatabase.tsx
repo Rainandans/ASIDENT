@@ -117,16 +117,24 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
   };
 
   const handleDelete = async (id: string, fullName: string, date: string, examiner: string, updatedAt?: string) => {
-    const formattedDate = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const formattedUpdate = updatedAt ? new Date(updatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Tidak ada';
+    const formattedDate = date && !isNaN(new Date(date).getTime()) 
+      ? new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : 'Tanggal Tidak Diketahui';
     
-    if (window.confirm(`PERINGATAN KERAS: Anda akan menghapus data rekam medis.\n\nPasien: ${fullName}\nTanggal Input: ${formattedDate}\nTerakhir Update: ${formattedUpdate}\nDokter/Pemeriksa: ${examiner}\nID: ${id}\n\nApakah Anda YAKIN? Tindakan ini permanen.`)) {
+    const formattedUpdate = updatedAt && !isNaN(new Date(updatedAt).getTime())
+      ? new Date(updatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) 
+      : (date ? new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'Tidak ada');
+    
+    console.log("Delete Request:", { id, fullName, date, updatedAt });
+
+    if (window.confirm(`KONFIRMASI PENGHAPUSAN\n\nPasien: ${fullName}\nID Data: ${id}\nTanggal Input: ${formattedDate}\nUpdate Terakhir: ${formattedUpdate}\nPemeriksa: ${examiner}\n\nApakah Anda YAKIN akan menghapus REKAM MEDIS ini secara permanen?`)) {
       try {
-        console.log("Deleting document:", id);
+        console.log("EXECUTE DELETE on ID:", id);
         await deleteDoc(doc(db, "assessments", id));
-      } catch (error) {
+        alert("Data berhasil dihapus.");
+      } catch (error: any) {
         console.error("Error deleting assessment:", error);
-        alert("Gagal menghapus data. Silakan coba lagi.");
+        alert("Gagal menghapus data: " + (error.message || "Unknown error"));
       }
     }
   };
