@@ -11,14 +11,14 @@ export async function generatePatientSummary(patientData: any) {
     
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to generate summary");
+      throw new Error(errorData.error || errorData.details || "Failed to generate summary");
     }
     
     const data = await response.json();
     return data.text;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating summary:", error);
-    return "Maaf, terjadi kesalahan teknis saat membuat ringkasan. Harap periksa koneksi atau coba lagi nanti.";
+    return `Maaf, terjadi kesalahan teknis saat membuat ringkasan: ${error.message || "Periksa koneksi atau coba lagi nanti."}`;
   }
 }
 import { db, collection, addDoc, getDocs, query, where, doc, updateDoc, setDoc, onSnapshot } from "../lib/firebase";
@@ -271,19 +271,15 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       
       if (location.state.isEditing) {
         setEditingId(pData.id || null);
-        console.log("Setting editingId:", pData.id);
-        // Ensure id is specifically set in form state
+        console.log("Setting editingId for edit mode:", pData.id);
         reset({ ...pData, id: pData.id });
+        // Clear draft when explicitly editing to avoid conflicts
+        localStorage.removeItem("asident_assessment_draft");
       } else {
         selectPatient(pData);
       }
       
-      // Clear state and mark as resetting to skip draft load on next cycle if it's a reset
-      if (location.state.resetForm) {
-        // Handled below but logic here to be safe
-      }
-      
-      setTimeout(() => { isResetting.current = false; }, 100);
+      setTimeout(() => { isResetting.current = false; }, 200);
       return;
     } 
     
@@ -306,12 +302,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     } 
 
     if (!isResetting.current) {
-      // Load draft if exists and not in middle of a reset/load
       const draft = localStorage.getItem("asident_assessment_draft");
-      if (draft && !editingId) {
+      if (draft && !editingId && !location.state?.patientData) {
         try {
           const parsed = JSON.parse(draft);
-          // Only reset if draft actually has content and we are not explicitly loading a different patient
           if (parsed.demographics?.fullName || parsed.healthHistory?.dental?.reason) {
             console.log("Loading form from local draft...");
             reset(parsed);
@@ -324,7 +318,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         }
       }
     }
-  }, [location.state, reset]);
+  }, [location.state, reset, navigate]);
 
   // Auto-save draft
   useEffect(() => {
@@ -397,15 +391,16 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     });
 
     try {
-      const idToUpdate = editingId || data.id || finalData.id;
+      // Robust ID detection
+      const idToUpdate = editingId || data.id || formData.id || finalData.id;
       const now = new Date().toISOString();
 
-      if (idToUpdate && idToUpdate !== "" && idToUpdate !== "null" && typeof idToUpdate === "string") {
+      console.log("Submit logic - idToUpdate:", idToUpdate, "isEditing:", !!editingId);
+
+      if (idToUpdate && idToUpdate !== "" && idToUpdate !== "null" && idToUpdate !== "undefined" && typeof idToUpdate === "string") {
         // Update existing using setDoc with merge:true
         console.log("Updating existing assessment with ID:", idToUpdate);
         
-        // Remove internal fields from doc data to prevent overwriting them incorrectly
-        // We omit createdAt entirely so Firestore merge preserves the original value
         const { id, createdAt, updatedAt, ...cleanData } = finalData;
         
         const docRef = doc(db, "assessments", idToUpdate);
@@ -416,25 +411,54 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         }, { merge: true });
         
         console.log("Update successful for ID:", idToUpdate);
-        alert("BERHASIL diperbarui! Data lama telah diperbarui dengan data baru.");
+        alert("BERHASIL diperbarui! Data lama telah diperbarui dengan data baru (Tidak ada duplikasi).");
       } else {
-        // Save New Assessment
-        console.log("Creating new assessment recording...");
+        // Double check if a record for this patient and today already exists to prevent duplicate on rapid clicks or lost ID
+        console.log("Checking for potential duplicate before creating new record...");
+        const todayStr = new Date().toISOString().split('T')[0];
+        const q = query(
+          collection(db, "assessments"), 
+          where("demographics.fullName", "==", finalData.demographics?.fullName),
+          where("examinerUid", "==", user.uid)
+        );
+        const existingSnapshot = await getDocs(q);
         
-        // Ensure we don't carry over an old ID or empty string
-        const { id, createdAt, updatedAt, ...newRecordData } = finalData;
-        
-        const newDoc = {
-          ...newRecordData,
-          examiner: user.name,
-          createdAt: now,
-          updatedAt: now
-        };
-        
-        const docRef = await addDoc(collection(db, "assessments"), newDoc);
-        setEditingId(docRef.id); // Prevent double creation if they click save again
-        console.log("Assessment saved successfully with new ID:", docRef.id);
-        alert("BERHASIL: Data rekam medis baru telah disimpan.");
+        let duplicateDocId = null;
+        existingSnapshot.forEach(doc => {
+          const d = doc.data();
+          const dDate = (d.createdAt || d.header?.visitDate || "").split('T')[0];
+          if (dDate === todayStr) {
+            duplicateDocId = doc.id;
+          }
+        });
+
+        if (duplicateDocId) {
+          console.log("Duplicate found for today, updating instead of creating:", duplicateDocId);
+          const { id, createdAt, updatedAt, ...cleanData } = finalData;
+          await setDoc(doc(db, "assessments", duplicateDocId), {
+            ...cleanData,
+            updatedAt: now
+          }, { merge: true });
+          setEditingId(duplicateDocId);
+          alert("Data Anda sudah ada untuk hari ini, sistem otomatis memperbarui data tersebut agar tidak duplikat.");
+        } else {
+          // Save New Assessment
+          console.log("Creating new assessment recording...");
+          
+          const { id, createdAt, updatedAt, ...newRecordData } = finalData;
+          
+          const newDoc = {
+            ...newRecordData,
+            examiner: user.name,
+            createdAt: now,
+            updatedAt: now
+          };
+          
+          const docRef = await addDoc(collection(db, "assessments"), newDoc);
+          setEditingId(docRef.id); 
+          console.log("Assessment saved successfully with new ID:", docRef.id);
+          alert("BERHASIL: Data rekam medis baru telah disimpan.");
+        }
       }
 
       // Clear draft after successful save

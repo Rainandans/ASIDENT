@@ -6,9 +6,9 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Gemini initialization using the reliable @google/generative-ai SDK
+// Gemini initialization 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 async function startServer() {
   const app = express();
@@ -20,8 +20,9 @@ async function startServer() {
   app.post("/api/ai/summary", async (req, res) => {
     const { patientData } = req.body;
     
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: "Gemini API Key not configured" });
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "") {
+      console.error("AI Error: GEMINI_API_KEY is missing from environment");
+      return res.status(500).json({ error: "Gemini API Key tidak terkonfigurasi di server" });
     }
 
     try {
@@ -82,7 +83,8 @@ async function startServer() {
       `;
 
       const result = await model.generateContent(prompt);
-      const output = result.response.text();
+      const response = await result.response;
+      const output = response.text();
 
       console.log("AI summary generated successfully.");
       res.json({ text: output });
