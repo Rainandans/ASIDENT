@@ -395,18 +395,25 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     });
 
     try {
+      setIsSubmitting(true);
+      
+      const formData = watch();
       // Robust ID detection - prioritize explicit editingId state
       const idToUpdate = editingId || data.id || formData.id || finalData.id;
       const now = new Date().toISOString();
       const todayStr = new Date().toISOString().split('T')[0];
 
-      console.log("Submit logic - idToUpdate:", idToUpdate, "isEditing:", !!editingId);
+      console.log("SUBMIT START - editingId state:", editingId);
+      console.log("SUBMIT START - data.id:", data.id);
+      console.log("SUBMIT START - formData.id:", formData.id);
+      console.log("SUBMIT START - finalData.id:", finalData.id);
+      console.log("SUBMIT START - Resolved idToUpdate:", idToUpdate);
 
       // FAIL-SAFE: Even if idToUpdate is missing, check if this patient already has a record for TODAY
-      let targetDocId = idToUpdate && typeof idToUpdate === "string" && idToUpdate.length > 5 ? idToUpdate : null;
+      let targetDocId = idToUpdate && typeof idToUpdate === "string" && idToUpdate.length > 5 && idToUpdate !== "null" && idToUpdate !== "undefined" ? idToUpdate : null;
       
       if (!targetDocId) {
-        console.log("No specific ID to update, checking for same-day record for patient:", finalData.demographics?.fullName);
+        console.log("No specific ID found in state, checking database for same-day record for patient:", finalData.demographics?.fullName);
         const q = query(
           collection(db, "assessments"), 
           where("demographics.fullName", "==", finalData.demographics?.fullName)
@@ -415,18 +422,18 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         
         existingSnapshot.forEach(docSnap => {
           const d = docSnap.data();
-          // Check if date matches today (either via createdAt or visitDate)
-          const dDate = (d.createdAt || d.header?.visitDate || "").split('T')[0];
+          // Check if date matches today (either via createdAt or visitDate or header.visitDate)
+          const dDate = (d.createdAt || d.header?.visitDate || d.visitDate || "").split('T')[0];
           if (dDate === todayStr) {
-            console.log("FOUND EXISTING RECORD FOR TODAY, MAPPING TO ID:", docSnap.id);
+            console.log("MATCH FOUND IN DB FOR TODAY:", docSnap.id);
             targetDocId = docSnap.id;
           }
         });
       }
 
-      if (targetDocId && targetDocId !== "null" && targetDocId !== "undefined") {
+      if (targetDocId) {
         // Update existing record
-        console.log("UPDATING record:", targetDocId);
+        console.log("DECISION: UPDATING record with ID:", targetDocId);
         
         const { id, createdAt, updatedAt, ...cleanData } = finalData;
         const docRef = doc(db, "assessments", targetDocId);
@@ -436,12 +443,12 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
           updatedAt: now
         }, { merge: true });
         
-        setEditingId(targetDocId); // Ensure state is synced
-        console.log("Update successful for ID:", targetDocId);
-        alert("DATA DIPERBARUI: Data pasien ini sudah ada dan telah diperbarui otomatis agar tidak duplikat.");
+        setEditingId(targetDocId); 
+        console.log("Update successful.");
+        alert("BERHASIL: Data rekam medis telah diperbarui (ID: " + targetDocId + ").");
       } else {
         // Save New Assessment
-        console.log("CREATING new record...");
+        console.log("DECISION: CREATING NEW record...");
         
         const { id, createdAt, updatedAt, ...newRecordData } = finalData;
         
@@ -455,7 +462,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         const docRef = await addDoc(collection(db, "assessments"), newDoc);
         setEditingId(docRef.id); 
         console.log("New record created with ID:", docRef.id);
-        alert("DATA DISIMPAN: Rekam medis baru telah berhasil dibuat.");
+        alert("BERHASIL: Rekam medis baru telah disimpan.");
       }
 
       // Clear draft after successful save

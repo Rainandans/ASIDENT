@@ -1,14 +1,20 @@
+import { GoogleGenAI } from "@google/genai";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Gemini initialization 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// Initialize the modern @google/genai SDK
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || "",
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
+});
 
 async function startServer() {
   const app = express();
@@ -82,9 +88,13 @@ async function startServer() {
         HASIL OUTPUT (Langsung ke ringkasan):
       `;
 
-      // Use generateContent directly and await response text
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      // Use the correct @google/genai syntax
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      });
+
+      const text = response.text; // Property, not method
 
       console.log("AI summary generated successfully.");
       res.json({ text });
