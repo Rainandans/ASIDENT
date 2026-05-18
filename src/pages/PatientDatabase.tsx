@@ -49,8 +49,12 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         
-        if (dateB !== dateA) {
-          return dateB - dateA;
+        // Handle Invalid Date (NaN)
+        const timeA = isNaN(dateA) ? 0 : dateA;
+        const timeB = isNaN(dateB) ? 0 : dateB;
+        
+        if (timeB !== timeA) {
+          return timeB - timeA;
         }
         // Force stable sort for items with identical timestamps
         return (b.id || "").localeCompare(a.id || "");
@@ -230,7 +234,11 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                       <div className="flex flex-wrap gap-4 text-sm font-medium text-slate-500">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {new Date(a.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {a.createdAt && !isNaN(new Date(a.createdAt).getTime()) ? (
+                            new Date(a.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                          ) : (
+                            <span className="text-red-500 font-bold italic">Tgl Tidak Valid</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1">
                           <FileText className="h-4 w-4" />

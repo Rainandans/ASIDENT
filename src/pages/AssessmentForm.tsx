@@ -355,21 +355,32 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         // Update existing using setDoc with merge:true to be more resilient
         console.log("Updating assessment with ID:", editingId);
         
-        // Remove id and createdAt from the data being sent to the body
+        // Remove internal fields from the data being sent to the body to avoid overwriting them
+        // We explicitly remove createdAt and id to ensure Firestore uses the existing ones (thanks to {merge: true})
         const { id, createdAt, ...dataToUpdate } = finalData;
         
+        // Ensure we don't send an empty or invalid updatedAt
+        const now = new Date().toISOString();
+
         await setDoc(doc(db, "assessments", editingId), {
           ...dataToUpdate,
-          updatedAt: new Date().toISOString()
+          updatedAt: now
         }, { merge: true });
+        
+        console.log("Update successful for ID:", editingId);
       } else {
         // Save New Assessment
         console.log("Creating new assessment document...");
-        const docRef = await addDoc(collection(db, "assessments"), {
+        // Ensure we have a valid ISO string
+        const now = new Date().toISOString();
+        const newDoc = {
           ...finalData,
           examiner: user.name,
-          createdAt: new Date().toISOString()
-        });
+          createdAt: now,
+          updatedAt: now
+        };
+        
+        const docRef = await addDoc(collection(db, "assessments"), newDoc);
         console.log("Assessment saved successfully with ID:", docRef.id);
       }
 
@@ -582,7 +593,12 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-xl font-black text-slate-900 tracking-tight">
-                  {editingId ? "Edit Rekam Medis" : "Pemeriksaan Baru"}
+                  {editingId ? (
+                    <span className="flex items-center gap-2 text-blue-600">
+                      <RefreshCw className="h-4 w-4 animate-spin-slow" />
+                      Edit Rekam Medis
+                    </span>
+                  ) : "Pemeriksaan Baru"}
                 </h1>
                 {!editingId && step === 1 && (
                   <button 
@@ -643,6 +659,26 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       </header>
 
       <main className="mx-auto max-w-5xl p-6">
+        {editingId && (
+          <div className="mb-8 rounded-[2rem] bg-indigo-600 p-6 text-white shadow-2xl shadow-indigo-200 border border-indigo-500/50">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md">
+                  <RefreshCw className="h-6 w-6 animate-spin-slow" />
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-70">Status Pengisian</h4>
+                  <p className="text-lg font-black tracking-tight">Mode Edit Rekam Medis Aktif</p>
+                  <p className="text-xs font-bold opacity-80 mt-0.5">Memperbarui: {watch("demographics.fullName") || "Pasien"}</p>
+                </div>
+              </div>
+              <div className="rounded-2xl bg-black/20 px-4 py-3 backdrop-blur-xl border border-white/10">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-0.5 text-right">ID Rekaman</p>
+                <p className="font-mono text-[10px] font-bold">{editingId}</p>
+              </div>
+            </div>
+          </div>
+        )}
         <form 
           onSubmit={(e) => e.preventDefault()} 
           onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
