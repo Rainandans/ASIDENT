@@ -104,8 +104,13 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
           plaqueScore = Number(((totalPlak / totalSurfaces) * 100).toFixed(1));
         }
 
+        const createdAtDate = a.createdAt ? new Date(a.createdAt) : null;
+        const formattedDate = createdAtDate && !isNaN(createdAtDate.getTime()) 
+          ? createdAtDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+          : 'Unknown';
+
         return {
-          date: new Date(a.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+          date: formattedDate,
           ohis: ohisScore || 0,
           plaque: plaqueScore || 0,
         };
@@ -140,9 +145,11 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
   };
 
   const filteredAssessments = assessments.filter(a => {
+    const fullNameStr = a.demographics?.fullName ? String(a.demographics.fullName).toLowerCase() : "";
+    const phoneStr = a.demographics?.phone ? String(a.demographics.phone) : "";
     const matchesSearch = 
-      (a.demographics?.fullName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (a.demographics?.phone || "").includes(searchTerm);
+      fullNameStr.includes(searchTerm.toLowerCase()) ||
+      phoneStr.includes(searchTerm);
     return matchesSearch;
   }).slice(0, filterRole === "recent" ? 10 : undefined);
 
@@ -269,7 +276,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                           <Database className="h-4 w-4" />
                           Pemeriksa: {a.examiner}
                         </div>
-                        {a.nextVisit?.date && (
+                        {a.nextVisit?.date && !isNaN(new Date(a.nextVisit.date).getTime()) && (
                           <div className="flex items-center gap-1 text-emerald-600 font-black">
                             <Calendar className="h-4 w-4" />
                             Kunjungan Berikutnya: {new Date(a.nextVisit.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -278,9 +285,9 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                       </div>
                       <div className="flex flex-wrap gap-2 mt-3">
                         <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[10px] font-bold">
-                          ID: {a.id.slice(-6).toUpperCase()}
+                          ID: {a.id ? String(a.id).slice(-6).toUpperCase() : 'UNKNOWN'}
                         </span>
-                        {a.updatedAt && (
+                        {a.updatedAt && !isNaN(new Date(a.updatedAt).getTime()) && (
                           <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded text-[10px] font-bold">
                             UPDATE: {new Date(a.updatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                           </span>
@@ -398,13 +405,13 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                 <div className="rounded-3xl bg-blue-50 p-6">
                   <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Status Terakhir OHI-S</p>
                   <p className="text-2xl font-black text-slate-900">
-                    {selectedPatientHistory[selectedPatientHistory.length - 1]?.ohis.toFixed(2)}
+                    {selectedPatientHistory.length > 0 ? Number(selectedPatientHistory[selectedPatientHistory.length - 1].ohis || 0).toFixed(2) : "0.00"}
                   </p>
                 </div>
                 <div className="rounded-3xl bg-emerald-50 p-6">
                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Status Terakhir Plak</p>
                   <p className="text-2xl font-black text-slate-900">
-                    {selectedPatientHistory[selectedPatientHistory.length - 1]?.plaque}%
+                    {selectedPatientHistory.length > 0 ? Number(selectedPatientHistory[selectedPatientHistory.length - 1].plaque || 0).toFixed(1) : "0.0"}%
                   </p>
                 </div>
               </div>
