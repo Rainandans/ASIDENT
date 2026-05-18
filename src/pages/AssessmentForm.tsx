@@ -11,14 +11,21 @@ export async function generatePatientSummary(patientData: any) {
     
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || errorData.details || "Failed to generate summary");
+      const msg = errorData.error || "Gagal menghubungi AI.";
+      if (msg.includes("quota") || msg.includes("Kuota") || msg.includes("Limit")) {
+        return `BATAS PENGGUNAAN HARIAN (QUOTA) TERPENUHI: 
+Maaf, kuota harian untuk asisten AI telah habis. 
+
+Anda tetap bisa menyimpan data rekam medis secara manual. Silakan coba fitur asisten AI lagi besok.`;
+      }
+      throw new Error(msg);
     }
     
     const data = await response.json();
     return data.text;
   } catch (error: any) {
     console.error("Error generating summary:", error);
-    return `Maaf, terjadi kesalahan teknis saat membuat ringkasan: ${error.message || "Periksa koneksi atau coba lagi nanti."}`;
+    return `Gagal membuat ringkasan: ${error.message || "Terjadi kesalahan teknis."}`;
   }
 }
 import { db, collection, addDoc, getDocs, query, where, doc, updateDoc, setDoc, onSnapshot } from "../lib/firebase";
@@ -370,97 +377,80 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     if (isSubmitting) return;
     setIsSubmitting(true);
     
-    console.log("Saving assessment started...", { user: user.name, role: user.role, isEditing: !!editingId });
+    console.log("SUBMIT START - Context:", { isEditing: !!editingId, editingId });
     
-    // Calculate final scores before saving
-    const indexTeeth = data.ohis?.indexTeeth || { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" };
-    const teeth = Object.values(indexTeeth);
-    const dValues = teeth.map(t => Number(data.ohis?.debris?.[t as string] || 0));
-    const cValues = teeth.map(t => Number(data.ohis?.calculus?.[t as string] || 0));
-    const di = dValues.reduce((a, b) => a + b, 0) / 6;
-    const ci = cValues.reduce((a, b) => a + b, 0) / 6;
-    const ohisScore = Number((di + ci).toFixed(2));
-
-    const surfaces = data.plaqueControl?.surfaces || [];
-    const totalPlak = surfaces.filter(Boolean).length;
-    const totalSurfaces = 32 * 4;
-    const plaqueScore = Number(((totalPlak / totalSurfaces) * 100).toFixed(1));
-
-    const finalData = sanitizeData({
-      ...data,
-      ohis: { ...data.ohis, score: ohisScore },
-      plaqueControl: { ...data.plaqueControl, score: plaqueScore },
-      examinerName: user.name,
-      examinerUid: user.uid,
-      examinerRole: user.role
-    });
-
     try {
-      setIsSubmitting(true);
-      
-      const formData = watch();
-      const idToUpdate = editingId || data.id || finalData.id;
+      // Calculate final scores
+      const indexTeeth = data.ohis?.indexTeeth || { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" };
+      const teeth = Object.values(indexTeeth);
+      const dValues = teeth.map(t => Number(data.ohis?.debris?.[t as string] || 0));
+      const cValues = teeth.map(t => Number(data.ohis?.calculus?.[t as string] || 0));
+      const di = dValues.reduce((a, b) => a + b, 0) / 6;
+      const ci = cValues.reduce((a, b) => a + b, 0) / 6;
+      const ohisScore = Number((di + ci).toFixed(2));
+
+      const surfaces = data.plaqueControl?.surfaces || [];
+      const totalPlak = surfaces.filter(Boolean).length;
+      const totalSurfaces = 32 * 4;
+      const plaqueScore = Number(((totalPlak / totalSurfaces) * 100).toFixed(1));
+
+      const finalData = sanitizeData({
+        ...data,
+        ohis: { ...data.ohis, score: ohisScore },
+        plaqueControl: { ...data.plaqueControl, score: plaqueScore },
+        examinerName: user.name,
+        examinerUid: user.uid,
+        examinerRole: user.role
+      });
+
       const now = new Date().toISOString();
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = now.split('T')[0];
 
-      console.log("SUBMIT LOG - editingId state:", editingId);
-      console.log("SUBMIT LOG - Resolved idToUpdate:", idToUpdate);
+      // CRITICAL ID Logic: Prioritize the ID of the record being edited
+      let targetDocId = (editingId && editingId !== "null" && editingId !== "undefined") ? editingId : (data.id || null);
+      
+      console.log("SUBMIT LOG - targetDocId determined:", targetDocId);
 
-      // DECISION LOGIC: 
-      // 1. If we have an explicit ID from editingId, we ALWAYS update that specific record.
-      // 2. If we don't have an ID, we check if this patient has a record TODAY to avoid accidental duplication.
-      
-      let targetDocId = (editingId && editingId !== "null") ? editingId : null;
-      
+      // Duplication Prevention
       if (!targetDocId) {
-        console.log("No editing session active, checking for same-day record for patient:", finalData.demographics?.fullName);
+        console.log("Attempting duplication check for patient:", finalData.demographics?.fullName);
         const q = query(
           collection(db, "assessments"), 
           where("demographics.fullName", "==", finalData.demographics?.fullName)
         );
         const existingSnapshot = await getDocs(q);
         
-        existingSnapshot.forEach(docSnap => {
+        for (const docSnap of existingSnapshot.docs) {
           const d = docSnap.data();
-          const dDate = (d.createdAt || d.header?.visitDate || d.visitDate || "").split('T')[0];
+          const dDate = (d.createdAt || d.header?.visitDate || "").split('T')[0];
           if (dDate === todayStr) {
-            console.log("DUPLICATE FOUND: Patient already has a record for today. Re-using ID:", docSnap.id);
+            console.log("Found record today. Mapped to ID:", docSnap.id);
             targetDocId = docSnap.id;
+            break;
           }
-        });
+        }
       }
 
       if (targetDocId) {
-        // Update existing record
-        console.log("ACTION: Updating existing record:", targetDocId);
-        
+        // UPDATE
+        console.log("EXECUTING UPDATE for ID:", targetDocId);
         const { id, createdAt, updatedAt, ...cleanData } = finalData;
         const docRef = doc(db, "assessments", targetDocId);
         
-        await setDoc(docRef, {
-          ...cleanData,
-          updatedAt: now
-        }, { merge: true });
+        await setDoc(docRef, { ...cleanData, updatedAt: now }, { merge: true });
         
         setEditingId(targetDocId); 
-        console.log("Update successful.");
-        alert("BERHASIL: Data rekam medis telah diperbarui (ID: " + targetDocId + ").");
+        alert("BERHASIL: Data rekam medis diperbarui (ID: " + targetDocId.slice(-6) + ").");
       } else {
-        // Save New Assessment
-        console.log("ACTION: Creating NEW record...");
-        
+        // CREATE
+        console.log("EXECUTING CREATE NEW");
         const { id, createdAt, updatedAt, ...newRecordData } = finalData;
-        
-        const newDoc = {
+        const docRef = await addDoc(collection(db, "assessments"), {
           ...newRecordData,
-          examiner: user.name,
           createdAt: now,
           updatedAt: now
-        };
-        
-        const docRef = await addDoc(collection(db, "assessments"), newDoc);
+        });
         setEditingId(docRef.id); 
-        console.log("New record created with ID:", docRef.id);
         alert("BERHASIL: Rekam medis baru telah disimpan.");
       }
 

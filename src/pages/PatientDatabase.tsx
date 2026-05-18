@@ -276,6 +276,16 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                           </div>
                         )}
                       </div>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[10px] font-bold">
+                          ID: {a.id.slice(-6).toUpperCase()}
+                        </span>
+                        {a.updatedAt && (
+                          <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded text-[10px] font-bold">
+                            UPDATE: {new Date(a.updatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-3">
