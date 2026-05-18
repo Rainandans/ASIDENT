@@ -25,6 +25,12 @@ async function startServer() {
     }
 
     try {
+      if (!patientData) {
+        return res.status(400).json({ error: "Data pasien tidak lengkap" });
+      }
+
+      console.log("Generating AI summary for patient:", patientData.demographics?.fullName);
+
       const prompt = `
         Anda adalah seorang Terapis Gigi dan Mulut profesional. Tugas Anda adalah membuat ringkasan kesehatan gigi dan mulut yang RAMAH PASIEN, MOTIVASIONAL, dan MUDAH DIPAHAMI berdasarkan data pemeriksaan berikut.
 
@@ -78,10 +84,14 @@ async function startServer() {
       const result = await model.generateContent(prompt);
       const output = result.response.text();
 
+      console.log("AI summary generated successfully.");
       res.json({ text: output });
     } catch (error: any) {
       console.error("Gemini Error:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ 
+        error: "Gagal memproses AI: " + (error.message || "Internal Server Error"),
+        details: error.toString()
+      });
     }
   });
 

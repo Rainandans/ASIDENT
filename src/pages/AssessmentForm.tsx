@@ -243,6 +243,11 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     defaultValues: INITIAL_FORM_STATE
   });
 
+  // Register ID to keep it in form state
+  useEffect(() => {
+    register("id");
+  }, [register]);
+
   const patientSigRef = useRef<SignatureCanvas>(null);
   const examinerSigRef = useRef<SignatureCanvas>(null);
 
@@ -267,7 +272,8 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       if (location.state.isEditing) {
         setEditingId(pData.id || null);
         console.log("Setting editingId:", pData.id);
-        reset({ ...pData });
+        // Ensure id is specifically set in form state
+        reset({ ...pData, id: pData.id });
       } else {
         selectPatient(pData);
       }
@@ -391,14 +397,14 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     });
 
     try {
-      const idToUpdate = editingId || finalData.id || data.id;
+      const idToUpdate = editingId || data.id || finalData.id;
       const now = new Date().toISOString();
 
-      if (idToUpdate && idToUpdate !== "" && idToUpdate !== "null") {
+      if (idToUpdate && idToUpdate !== "" && idToUpdate !== "null" && typeof idToUpdate === "string") {
         // Update existing using setDoc with merge:true
         console.log("Updating existing assessment with ID:", idToUpdate);
         
-        // Remove internal fields from doc data
+        // Remove internal fields from doc data to prevent overwriting them incorrectly
         // We omit createdAt entirely so Firestore merge preserves the original value
         const { id, createdAt, updatedAt, ...cleanData } = finalData;
         
@@ -410,7 +416,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         }, { merge: true });
         
         console.log("Update successful for ID:", idToUpdate);
-        alert("BERHASIL: Data rekam medis pasien telah diperbarui.");
+        alert("BERHASIL diperbarui! Data lama telah diperbarui dengan data baru.");
       } else {
         // Save New Assessment
         console.log("Creating new assessment recording...");
@@ -2222,11 +2228,13 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                             try {
                               setIsGeneratingAi(true);
                               const currentValues = watch(); 
-                              const summary = await generatePatientSummary(currentValues);
+                              // Sanitize to avoid functions or circular refs which break JSON.stringify
+                              const sanitizedValues = sanitizeData(currentValues);
+                              const summary = await generatePatientSummary(sanitizedValues);
                               setAiSummary(summary);
                             } catch (err) {
                               console.error("AI Generation Error:", err);
-                              setAiSummary("Maaf, gagal membuat ringkasan. Pastikan kunci API Gemini sudah terpasang.");
+                              setAiSummary("Maaf, gagal membuat ringkasan. Terjadi kesalahan pada sistem analisis.");
                             } finally {
                               setIsGeneratingAi(false);
                             }
