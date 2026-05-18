@@ -1,19 +1,14 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const ai = new GoogleGenAI({ 
-  apiKey: process.env.GEMINI_API_KEY || "",
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
+// Gemini initialization using the reliable @google/generative-ai SDK
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 async function startServer() {
   const app = express();
@@ -64,7 +59,7 @@ async function startServer() {
            - Kategori: ${patientData.ohis?.index || "-"}
 
         DIAGNOSIS & KEBUTUHAN MANUSIA:
-        ${patientData.diagnosis?.map((d: any) => `- ${d.name || d.diagnosis}`).join("\n    ") || "Dalam batas normal."}
+        ${patientData.diagnosis?.map((d: any) => `- ${d.needId || d.diagnosis}: ${d.causes}`).join("\n    ") || "Dalam batas normal."}
 
         TINDAKAN YANG DIREKOMENDASIKAN:
         - Rencana Perawatan: ${patientData.nextVisit?.recommendation || "Pembersihan rutin dan kontrol berkala."}
@@ -80,13 +75,10 @@ async function startServer() {
         HASIL OUTPUT (Langsung ke ringkasan):
       `;
 
-      // Correct usage for @google/genai
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash", 
-        contents: prompt,
-      });
+      const result = await model.generateContent(prompt);
+      const output = result.response.text();
 
-      res.json({ text: response.text });
+      res.json({ text: output });
     } catch (error: any) {
       console.error("Gemini Error:", error);
       res.status(500).json({ error: error.message });

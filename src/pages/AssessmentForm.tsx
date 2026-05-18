@@ -391,42 +391,44 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     });
 
     try {
-      if (editingId) {
-        // Update existing using setDoc with merge:true to be more resilient
-        console.log("Updating assessment with ID:", editingId);
+      const idToUpdate = editingId || finalData.id || data.id;
+      const now = new Date().toISOString();
+
+      if (idToUpdate && idToUpdate !== "" && idToUpdate !== "null") {
+        // Update existing using setDoc with merge:true
+        console.log("Updating existing assessment with ID:", idToUpdate);
         
-        // Ensure we preserve the original createdAt from the form data if it exists
-        const originalCreatedAt = data.createdAt || data.header?.visitDate;
+        // Remove internal fields from doc data
+        // We omit createdAt entirely so Firestore merge preserves the original value
+        const { id, createdAt, updatedAt, ...cleanData } = finalData;
         
-        // Remove internal id but NOT createdAt from the data being sent
-        const { id, ...dataToUpdate } = finalData;
+        const docRef = doc(db, "assessments", idToUpdate);
         
-        const docRef = doc(db, "assessments", editingId);
-        
-        // We use setDoc with merge: true but we explicitly include createdAt 
-        // to be absolutely sure it's not lost if the doc is somehow corrupted
         await setDoc(docRef, {
-          ...dataToUpdate,
-          createdAt: originalCreatedAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          ...cleanData,
+          updatedAt: now
         }, { merge: true });
         
-        console.log("Update successful for ID:", editingId);
-        alert("Data rekam medis berhasil diperbarui!");
+        console.log("Update successful for ID:", idToUpdate);
+        alert("BERHASIL: Data rekam medis pasien telah diperbarui.");
       } else {
         // Save New Assessment
-        console.log("Creating new assessment document...");
-        const now = new Date().toISOString();
+        console.log("Creating new assessment recording...");
+        
+        // Ensure we don't carry over an old ID or empty string
+        const { id, createdAt, updatedAt, ...newRecordData } = finalData;
+        
         const newDoc = {
-          ...finalData,
+          ...newRecordData,
           examiner: user.name,
           createdAt: now,
           updatedAt: now
         };
         
         const docRef = await addDoc(collection(db, "assessments"), newDoc);
-        console.log("Assessment saved successfully with ID:", docRef.id);
-        alert("Data berhasil disimpan!");
+        setEditingId(docRef.id); // Prevent double creation if they click save again
+        console.log("Assessment saved successfully with new ID:", docRef.id);
+        alert("BERHASIL: Data rekam medis baru telah disimpan.");
       }
 
       // Clear draft after successful save
@@ -496,11 +498,11 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         colors: ["#2563eb", "#10b981", "#6366f1"]
       });
       
-      alert("Data berhasil disimpan ke database!");
+      // Removed redundant second alert that caused confusion
       
       setTimeout(() => {
         navigate("/");
-      }, 1000);
+      }, 1500);
     } catch (error: any) {
       console.error("CRITICAL ERROR saving assessment:", error);
       alert(`Gagal menyimpan data: ${error.message || "Unknown error"}. Mohon hubungi admin.`);
@@ -2407,22 +2409,36 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
 }
 
 function PatientHeader({ name, date }: { name: string; date?: string }) {
-  // Try multiple date sources
-  const dateStr = date || new Date().toISOString();
-  const displayDate = new Date(dateStr);
-  const isValidDate = !isNaN(displayDate.getTime());
+  // Try several date sources, ensuring we don't use invalid strings
+  const getValidDateStr = () => {
+    if (date && date.trim() !== "" && !isNaN(new Date(date).getTime())) {
+      return date;
+    }
+    return new Date().toISOString();
+  };
+
+  const displayDateStr = getValidDateStr();
+  const displayDate = new Date(displayDateStr);
+  const isEditing = date && date.trim() !== "";
   
   return (
     <div className="flex items-center justify-between rounded-[2.5rem] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-8 text-white shadow-2xl shadow-blue-500/20 relative overflow-hidden group">
       <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
       <div className="relative z-10">
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70">Pasien Saat Ini</p>
-        <h3 className="text-3xl font-black tracking-tight">{name || "Belum Diisi"}</h3>
+        <div className="flex items-center gap-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70">Identitas Pasien</p>
+          {isEditing && (
+            <span className="bg-emerald-400 text-emerald-950 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+              EDIT MODE
+            </span>
+          )}
+        </div>
+        <h3 className="text-3xl font-black tracking-tight">{name || "Data Pasien Baru"}</h3>
       </div>
       <div className="text-right relative z-10">
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70">Tanggal Pengisian</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70">Tanggal Rekam Medis</p>
         <h3 className="text-xl font-bold">
-          {isValidDate ? displayDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : "Tanggal Belum Terdaftar"}
+          {displayDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
         </h3>
       </div>
     </div>

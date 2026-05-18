@@ -46,12 +46,19 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
       });
       // Sort by createdAt descending, use ID as secondary sort to ensure stability
       data.sort((a, b) => {
-        const dateA = new Date(a.createdAt || a.header?.visitDate || 0).getTime();
-        const dateB = new Date(b.createdAt || b.header?.visitDate || 0).getTime();
-        
-        // Handle Invalid Date (NaN)
-        const timeA = isNaN(dateA) ? 0 : dateA;
-        const timeB = isNaN(dateB) ? 0 : dateB;
+        const getTimestamp = (doc: any) => {
+          const sources = [doc.createdAt, doc.header?.visitDate];
+          for (const src of sources) {
+            if (src) {
+              const t = new Date(src).getTime();
+              if (!isNaN(t)) return t;
+            }
+          }
+          return 0; // Fallback to epoch if no valid date found
+        };
+
+        const timeA = getTimestamp(a);
+        const timeB = getTimestamp(b);
         
         if (timeB !== timeA) {
           return timeB - timeA;
@@ -234,13 +241,17 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                       <div className="flex flex-wrap gap-4 text-sm font-medium text-slate-500">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {a.createdAt && !isNaN(new Date(a.createdAt).getTime()) ? (
-                            new Date(a.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                          ) : a.header?.visitDate ? (
-                            new Date(a.header.visitDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                          ) : (
-                            <span className="text-amber-500 font-bold italic">Tanpa Tanggal</span>
-                          )}
+                          {(() => {
+                            const date = a.createdAt || a.header?.visitDate;
+                            if (date && !isNaN(new Date(date).getTime())) {
+                              return new Date(date).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              });
+                            }
+                            return <span className="text-amber-500 font-bold italic">Tanpa Tanggal</span>;
+                          })()}
                         </div>
                         <div className="flex items-center gap-1">
                           <FileText className="h-4 w-4" />
