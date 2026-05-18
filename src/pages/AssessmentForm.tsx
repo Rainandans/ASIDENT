@@ -407,7 +407,14 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       const todayStr = now.split('T')[0];
 
       // CRITICAL ID Logic: Prioritize the ID of the record being edited
-      let targetDocId = (editingId && editingId !== "null" && editingId !== "undefined") ? editingId : (data.id || null);
+      let passedId = null;
+      if (location.state?.isEditing && location.state?.patientData) {
+        passedId = location.state.patientData.id || location.state.patientData.uid;
+      }
+      
+      let targetDocId = (editingId && editingId !== "null" && editingId !== "undefined") 
+        ? editingId 
+        : (data.id || passedId || null);
       
       console.log("SUBMIT LOG - targetDocId determined:", targetDocId);
 
@@ -549,7 +556,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       const uniquePatients: any[] = [];
       
       assessmentsSnapshot.forEach((doc) => {
-        const p = { id: doc.id, ...doc.data() } as any;
+        const p = { ...doc.data(), id: doc.id } as any;
         if (!p.demographics) return;
         
         if (p.demographics.fullName.toLowerCase().includes(term.toLowerCase()) || p.demographics.phone.includes(term)) {

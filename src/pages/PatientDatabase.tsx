@@ -42,7 +42,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
       console.log(`PatientDatabase: Received snapshot with ${snapshot.size} documents.`);
       const data: any[] = [];
       snapshot.forEach((doc) => {
-        data.push({ id: doc.id, ...doc.data() });
+        data.push({ ...doc.data(), id: doc.id });
       });
       // Sort by createdAt descending, use ID as secondary sort to ensure stability
       data.sort((a, b) => {
