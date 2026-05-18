@@ -1,7 +1,26 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import SignatureCanvas from "react-signature-canvas";
-import { generatePatientSummary } from "../services/gemini";
+export async function generatePatientSummary(patientData: any) {
+  try {
+    const response = await fetch("/api/ai/summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patientData }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to generate summary");
+    }
+    
+    const data = await response.json();
+    return data.text;
+  } catch (error) {
+    console.error("Error generating summary:", error);
+    return "Maaf, terjadi kesalahan teknis saat membuat ringkasan. Harap periksa koneksi atau coba lagi nanti.";
+  }
+}
 import { db, collection, addDoc, getDocs, query, where, doc, updateDoc, setDoc, onSnapshot } from "../lib/firebase";
 import { 
   ChevronLeft, 
@@ -238,14 +257,27 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
   // Handle incoming patient data from Database page
   useEffect(() => {
     if (location.state?.patientData) {
-      isResetting.current = false;
+      console.log("Loading patient data from navigation state...");
+      isResetting.current = true;
+      const pData = location.state.patientData;
+      
       if (location.state.isEditing) {
-        setEditingId(location.state.patientData.id);
-        reset(location.state.patientData);
+        setEditingId(pData.id || null);
+        reset(pData);
       } else {
-        selectPatient(location.state.patientData);
+        selectPatient(pData);
       }
-    } else if (location.state?.resetForm) {
+      
+      // Clear state and mark as resetting to skip draft load on next cycle if it's a reset
+      if (location.state.resetForm) {
+        // Handled below but logic here to be safe
+      }
+      
+      setTimeout(() => { isResetting.current = false; }, 100);
+      return;
+    } 
+    
+    if (location.state?.resetForm) {
       console.log("Resetting form for new patient...");
       isResetting.current = true;
       localStorage.removeItem("asident_assessment_draft");
@@ -257,17 +289,21 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       setSearchResults([]);
       setAiSummary("");
       setActivePeriodontalTooth(null);
-      // Clear state and mark as resetting to skip draft load on next cycle
+      
       navigate(location.pathname, { replace: true, state: {} });
       setTimeout(() => { isResetting.current = false; }, 1000);
-    } else if (!isResetting.current) {
-      // Load draft if exists and not in middle of a reset
+      return;
+    } 
+
+    if (!isResetting.current) {
+      // Load draft if exists and not in middle of a reset/load
       const draft = localStorage.getItem("asident_assessment_draft");
       if (draft && !editingId) {
         try {
           const parsed = JSON.parse(draft);
-          // Only reset if draft actually has content
+          // Only reset if draft actually has content and we are not explicitly loading a different patient
           if (parsed.demographics?.fullName || parsed.healthHistory?.dental?.reason) {
+            console.log("Loading form from local draft...");
             reset(parsed);
             if (parsed.id) {
               setEditingId(parsed.id);
@@ -278,7 +314,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         }
       }
     }
-  }, [location.state]);
+  }, [location.state, reset]);
 
   // Auto-save draft
   useEffect(() => {
@@ -356,16 +392,22 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         console.log("Updating assessment with ID:", editingId);
         
         // We explicitly remove internal fields that should NOT be modified
+        // We ensure createdAt is preserved by NOT including it in updateDoc
         const { id, createdAt, ...dataToUpdate } = finalData;
         
         const docRef = doc(db, "assessments", editingId);
-        await updateDoc(docRef, {
+        
+        // Use setDoc with { merge: true } as it's more forgiving on nested updates if needed,
+        // but here updateDoc is fine since we know it exists.
+        // Actually, let's use setDoc with merge: true to avoid "No document to update" errors
+        // and ensure we don't accidentally wipe out fields if somehow they were missing in the form.
+        await setDoc(docRef, {
           ...dataToUpdate,
           updatedAt: new Date().toISOString()
-        });
+        }, { merge: true });
         
         console.log("Update successful for ID:", editingId);
-        alert("Data berhasil diperbarui!");
+        alert("Data rekam medis berhasil diperbarui!");
       } else {
         // Save New Assessment
         console.log("Creating new assessment document...");
@@ -827,7 +869,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-10"
               >
-                <PatientHeader name={watch("demographics.fullName")} />
+                <PatientHeader 
+                  name={watch("demographics.fullName")} 
+                  date={watch("createdAt" as any) || watch("header.visitDate" as any)} 
+                />
                 
                 <div>
                   <SectionHeader title="Riwayat Medis (Medical History)" icon={HeartPulse} />
@@ -2146,7 +2191,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                 className="space-y-10"
               >
                 <div className="no-print">
-                  <PatientHeader name={watch("demographics.fullName")} />
+                  <PatientHeader 
+                    name={watch("demographics.fullName")} 
+                    date={watch("createdAt" as any) || watch("header.visitDate" as any)} 
+                  />
                 </div>
                 
                 <div>
@@ -2353,7 +2401,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
   );
 }
 
-function PatientHeader({ name }: { name: string }) {
+function PatientHeader({ name, date }: { name: string; date?: string }) {
+  const displayDate = date ? new Date(date) : new Date();
+  const isValidDate = !isNaN(displayDate.getTime());
+  
   return (
     <div className="flex items-center justify-between rounded-[2.5rem] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-8 text-white shadow-2xl shadow-blue-500/20 relative overflow-hidden group">
       <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
@@ -2363,7 +2414,9 @@ function PatientHeader({ name }: { name: string }) {
       </div>
       <div className="text-right relative z-10">
         <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70">Tanggal Pengisian</p>
-        <h3 className="text-xl font-bold">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</h3>
+        <h3 className="text-xl font-bold">
+          {isValidDate ? displayDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : "Tanggal Tidak Valid"}
+        </h3>
       </div>
     </div>
   );
