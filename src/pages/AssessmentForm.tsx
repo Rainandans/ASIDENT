@@ -67,7 +67,16 @@ interface AssessmentFormProps {
   onLogout?: () => void;
 }
 
+const toLocalDatetimeStr = (dateStr?: string | Date) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
+
 const INITIAL_FORM_STATE = {
+  createdAt: toLocalDatetimeStr(new Date()),
   header: {
     studentName: "",
     nim: "",
@@ -274,7 +283,10 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     if (location.state?.patientData) {
       console.log("Loading patient data from navigation state...");
       isResetting.current = true;
-      const pData = location.state.patientData;
+      const pData = { ...location.state.patientData };
+      if (pData.createdAt) {
+        pData.createdAt = toLocalDatetimeStr(pData.createdAt);
+      }
       
       if (location.state.isEditing) {
         const idToSet = pData.id || pData.uid;
@@ -441,20 +453,22 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       if (targetDocId) {
         // UPDATE
         console.log("EXECUTING UPDATE for ID:", targetDocId);
-        const { id, createdAt, updatedAt, ...cleanData } = finalData;
+        const { id, updatedAt, ...cleanData } = finalData;
+        const actualCreatedAt = finalData.createdAt ? new Date(finalData.createdAt).toISOString() : now;
         const docRef = doc(db, "assessments", targetDocId);
         
-        await setDoc(docRef, { ...cleanData, updatedAt: now }, { merge: true });
+        await setDoc(docRef, { ...cleanData, createdAt: actualCreatedAt, updatedAt: now }, { merge: true });
         
         setEditingId(targetDocId); 
         alert("BERHASIL: Data rekam medis diperbarui (ID: " + targetDocId.slice(-6) + ").");
       } else {
         // CREATE
         console.log("EXECUTING CREATE NEW");
-        const { id, createdAt, updatedAt, ...newRecordData } = finalData;
+        const { id, updatedAt, ...newRecordData } = finalData;
+        const actualCreatedAt = finalData.createdAt ? new Date(finalData.createdAt).toISOString() : now;
         const docRef = await addDoc(collection(db, "assessments"), {
           ...newRecordData,
-          createdAt: now,
+          createdAt: actualCreatedAt,
           updatedAt: now
         });
         setEditingId(docRef.id); 
@@ -777,8 +791,12 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                     <h3 className="text-3xl font-black tracking-tight">{watch("demographics.fullName") || "Belum Diisi"}</h3>
                   </div>
                   <div className="text-right relative z-10">
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70">Tanggal Pengisian</p>
-                    <h3 className="text-xl font-bold">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</h3>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70">Waktu Pengisian</p>
+                    <h3 className="text-xl font-bold">
+                      {watch("createdAt") 
+                        ? new Date(watch("createdAt")).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+                        : new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </h3>
                   </div>
                 </div>
 
@@ -862,6 +880,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                  <InputGroup label="Tanggal Pengisian & Waktu" register={register("createdAt")} type="datetime-local" />
                   <InputGroup label="Nama Lengkap" register={register("demographics.fullName")} placeholder="Masukkan nama pasien..." />
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700">Jenis Kelamin</label>
