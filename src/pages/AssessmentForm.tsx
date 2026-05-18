@@ -352,26 +352,23 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
 
     try {
       if (editingId) {
-        // Update existing using setDoc with merge:true to be more resilient
+        // Update existing using updateDoc to ensure fields are actually modified
         console.log("Updating assessment with ID:", editingId);
         
-        // Remove internal fields from the data being sent to the body to avoid overwriting them
-        // We explicitly remove createdAt and id to ensure Firestore uses the existing ones (thanks to {merge: true})
+        // We explicitly remove internal fields that should NOT be modified
         const { id, createdAt, ...dataToUpdate } = finalData;
         
-        // Ensure we don't send an empty or invalid updatedAt
-        const now = new Date().toISOString();
-
-        await setDoc(doc(db, "assessments", editingId), {
+        const docRef = doc(db, "assessments", editingId);
+        await updateDoc(docRef, {
           ...dataToUpdate,
-          updatedAt: now
-        }, { merge: true });
+          updatedAt: new Date().toISOString()
+        });
         
         console.log("Update successful for ID:", editingId);
+        alert("Data berhasil diperbarui!");
       } else {
         // Save New Assessment
         console.log("Creating new assessment document...");
-        // Ensure we have a valid ISO string
         const now = new Date().toISOString();
         const newDoc = {
           ...finalData,
@@ -382,6 +379,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
         
         const docRef = await addDoc(collection(db, "assessments"), newDoc);
         console.log("Assessment saved successfully with ID:", docRef.id);
+        alert("Data berhasil disimpan!");
       }
 
       // Clear draft after successful save
