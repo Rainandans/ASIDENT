@@ -235,7 +235,6 @@ const getInitialFormState = () => ({
     notes: "",
     recommendation: ""
   },
-  createdAt: "",
   updatedAt: "",
   id: ""
 });

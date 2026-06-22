@@ -13,7 +13,8 @@ import {
   Database,
   TrendingUp,
   X,
-  LogOut
+  LogOut,
+  Plus
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
