@@ -305,10 +305,17 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                       </button>
                       <button 
                         onClick={() => navigate("/assessment", { state: { patientData: a, isEditing: true } })}
-                        className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-black text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+                        className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-black text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
                       >
                         <ExternalLink className="h-4 w-4" />
-                        EDIT / LIHAT DATA
+                        EDIT DATA
+                      </button>
+                      <button 
+                        onClick={() => navigate("/assessment", { state: { patientData: a, isNewVisit: true } })}
+                        className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-6 py-3 text-sm font-black text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all active:scale-95"
+                      >
+                        <Plus className="h-4 w-4" />
+                        KUNJUNGAN BARU
                       </button>
                       <button 
                         onClick={() => handleDelete(a.id, a.demographics?.fullName || 'Tanpa Nama', a.createdAt, a.examiner || 'Tidak Diketahui', a.updatedAt)}

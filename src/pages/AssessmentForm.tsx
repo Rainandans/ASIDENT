@@ -300,6 +300,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       }
       
       setTimeout(() => { isResetting.current = false; }, 200);
+      navigate(location.pathname, { replace: true, state: {} });
       return;
     } 
     
@@ -613,6 +614,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     
     // Reset clinical fields for new visit (Pemeriksaan Objektif)
     setEditingId(null);
+    setValue("createdAt", toLocalDatetimeStr(new Date()));
     setValue("header.visitDate", new Date().toISOString().split('T')[0]);
     setValue("vitals", { bp: "", pulse: "", resp: "" });
     setValue("extraIntraOral", { 
@@ -691,13 +693,14 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                     </span>
                   ) : "Pemeriksaan Baru"}
                 </h1>
-                {!editingId && step === 1 && (
+                {step === 1 && (
                   <button 
                     onClick={() => {
                       if (confirm("Apakah Anda yakin ingin menghapus data yang sedang diisi dan mulai dari awal secara kosong?")) {
                         isResetting.current = true;
                         localStorage.removeItem("asident_assessment_draft");
                         reset(getInitialFormState());
+                        setEditingId(null);
                         setStep(1);
                         setIsExistingPatient(false);
                         setSearchTerm("");
@@ -710,7 +713,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                     className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-[10px] font-black text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all border border-slate-200 shadow-sm"
                   >
                     <Plus className="h-3 w-3" />
-                    MULAI BARU (KOSONGKAN)
+                    KOSONGKAN FORMULIR
                   </button>
                 )}
               </div>
