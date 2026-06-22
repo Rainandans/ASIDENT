@@ -227,7 +227,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           {filteredMenuItems.map((item) => (
             <button 
               key={item.id}
-              onClick={() => item.path !== "#" && navigate(item.path)}
+              onClick={() => {
+                if (item.path !== "#") {
+                  navigate(item.path, item.path === "/assessment" ? { state: { resetForm: true } } : undefined);
+                }
+              }}
               className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-slate-500 hover:bg-white/80 hover:text-blue-600 hover:shadow-sm transition-all font-bold text-sm group"
             >
               <div className={cn("rounded-lg p-1.5 transition-colors", "group-hover:bg-blue-50")}>
@@ -302,7 +306,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             </div>
             {(user.role === "admin" || user.role === "pemeriksa") && (
               <button 
-                onClick={() => navigate("/assessment")}
+                onClick={() => navigate("/assessment", { state: { resetForm: true } })}
                 className="group flex items-center gap-3 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-700 px-10 py-5 font-black text-white shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-95"
               >
                 <PlusCircle className="h-6 w-6 group-hover:rotate-90 transition-transform duration-500" />

@@ -75,7 +75,7 @@ const toLocalDatetimeStr = (dateStr?: string | Date) => {
   return d.toISOString().slice(0, 16);
 };
 
-const INITIAL_FORM_STATE = {
+const getInitialFormState = () => ({
   createdAt: toLocalDatetimeStr(new Date()),
   header: {
     studentName: "",
@@ -238,7 +238,7 @@ const INITIAL_FORM_STATE = {
   createdAt: "",
   updatedAt: "",
   id: ""
-};
+});
 
 export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) {
   const navigate = useNavigate();
@@ -256,7 +256,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
   const totalSteps = 10;
 
   const { register, handleSubmit, watch, setValue, control, reset, formState: { errors } } = useForm({
-    defaultValues: INITIAL_FORM_STATE
+    defaultValues: getInitialFormState()
   });
 
   // Register ID to keep it in form state
@@ -308,7 +308,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
       isResetting.current = true;
       localStorage.removeItem("asident_assessment_draft");
       setEditingId(null);
-      reset(INITIAL_FORM_STATE);
+      reset(getInitialFormState());
       setStep(1);
       setIsExistingPatient(false);
       setSearchTerm("");
@@ -697,7 +697,7 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                       if (confirm("Apakah Anda yakin ingin menghapus data yang sedang diisi dan mulai dari awal secara kosong?")) {
                         isResetting.current = true;
                         localStorage.removeItem("asident_assessment_draft");
-                        reset(INITIAL_FORM_STATE);
+                        reset(getInitialFormState());
                         setStep(1);
                         setIsExistingPatient(false);
                         setSearchTerm("");
