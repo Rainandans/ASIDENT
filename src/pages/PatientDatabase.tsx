@@ -14,7 +14,13 @@ import {
   TrendingUp,
   X,
   LogOut,
-  Plus
+  Plus,
+  Apple,
+  Bell,
+  Printer,
+  MessageSquare,
+  CheckCircle2,
+  Clock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
@@ -36,6 +42,7 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [selectedPatient, setSelectedPatient] = useState<{ fullName: string; phone: string } | null>(null);
+  const [selectedReminderPatient, setSelectedReminderPatient] = useState<any | null>(null);
 
   useEffect(() => {
     console.log("PatientDatabase: Fetching assessments...");
@@ -89,11 +96,12 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
         let ohisScore = a.ohis?.score;
         if (ohisScore === undefined && a.ohis?.debris && a.ohis?.calculus) {
           const indexTeeth = a.ohis.indexTeeth || { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" };
-          const teeth = Object.values(indexTeeth);
+          const teeth = Object.values(indexTeeth).filter((t: any) => t && t !== "-");
           const dValues = teeth.map(t => Number(a.ohis.debris[t as string] || 0));
           const cValues = teeth.map(t => Number(a.ohis.calculus[t as string] || 0));
-          const di = dValues.reduce((a, b) => a + b, 0) / 6;
-          const ci = cValues.reduce((a, b) => a + b, 0) / 6;
+          const count = teeth.length > 0 ? teeth.length : 1;
+          const di = teeth.length > 0 ? (dValues.reduce((a, b) => a + b, 0) / count) : 0;
+          const ci = teeth.length > 0 ? (cValues.reduce((a, b) => a + b, 0) / count) : 0;
           ohisScore = Number((di + ci).toFixed(2));
         }
 
@@ -143,6 +151,116 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
         alert("Gagal menghapus data: " + (error.message || "Unknown error"));
       }
     }
+  };
+
+  const handlePrintPatientReminder = (patient: any) => {
+    const fullName = patient.demographics?.fullName || "Pasien ASIDENT";
+    const visitDate = patient.createdAt ? new Date(patient.createdAt) : new Date();
+    const nextDate = new Date(visitDate);
+    nextDate.setMonth(nextDate.getMonth() + 6);
+    const formattedDate = nextDate.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Kartu Pengingat Kontrol & Edukasi Pasien - ASIDENT</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
+            body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 30px; color: #0f172a; line-height: 1.5; }
+            .card { max-width: 580px; margin: 0 auto; border: 2px solid #2563eb; border-radius: 24px; padding: 36px; background: #fff; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 20px; }
+            .logo { font-size: 24px; font-weight: 900; color: #2563eb; margin: 0; }
+            .tagline { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 2px; }
+            .badge { background: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 800; padding: 6px 12px; border-radius: 10px; }
+            .patient-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 18px; margin-bottom: 20px; }
+            .recall-box { background: #eff6ff; border: 2px solid #3b82f6; border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 20px; }
+            .recall-title { font-size: 11px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 1.5px; }
+            .recall-date { font-size: 20px; font-weight: 900; color: #1e3a8a; margin: 6px 0; }
+            .item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border-radius: 12px; margin-bottom: 8px; background: #f8fafc; border-left: 4px solid #10b981; }
+            .item-title { font-size: 12px; font-weight: 800; color: #0f172a; margin: 0; }
+            .item-desc { font-size: 11px; color: #475569; margin-top: 2px; }
+            .footer { margin-top: 24px; padding-top: 14px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #94a3b8; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="header">
+              <div>
+                <p class="logo">ASIDENT</p>
+                <p class="tagline">Layanan Asuhan Kesehatan Gigi & Mulut</p>
+              </div>
+              <span class="badge">LEMBAR PENGINGAT PASIEN</span>
+            </div>
+            <div class="patient-box">
+              <span style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Nama Pasien</span>
+              <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${fullName}</div>
+            </div>
+            <div class="recall-box">
+              <div class="recall-title">🗓️ JADWAL KONTROL 6 BULAN BERIKUTNYA</div>
+              <div class="recall-date">${formattedDate}</div>
+              <div style="font-size: 11px; color: #475569;">Pembersihan karang gigi & pemeriksaan rutin sebelum timbul rasa sakit.</div>
+            </div>
+            <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">🥦 ANJURAN POLA HIDUP SEHAT GIGI</div>
+            <div class="item">
+              <div>🥗</div>
+              <div>
+                <div class="item-title">Perbanyak Buah & Sayur Berserat Tinggi</div>
+                <div class="item-desc">Mengunyah apel, bengkuang, wortel secara alami membersihkan plak (self-cleansing) dan memicu air liur.</div>
+              </div>
+            </div>
+            <div class="item">
+              <div>🪥</div>
+              <div>
+                <div class="item-title">Sikat Gigi 2 Kali Sehari (Pagi & Malam)</div>
+                <div class="item-desc">Pagi setelah sarapan & malam sebelum tidur dengan pasta gigi berfluoride.</div>
+              </div>
+            </div>
+            <div class="item">
+              <div>🔄</div>
+              <div>
+                <div class="item-title">Ganti Sikat Gigi Tiap 3 Bulan Sekali</div>
+                <div class="item-desc">Bulu sikat mekar kehilangan efektivitas dan dapat melukai gusi.</div>
+              </div>
+            </div>
+            <div class="footer">
+              Terima kasih telah mempercayakan kesehatan gigi Anda kepada kami • Hubungi klinik untuk reservasi jadwal.
+            </div>
+          </div>
+          <script>window.print(); window.close();</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleSendWhatsAppReminder = (patient: any) => {
+    const fullName = patient.demographics?.fullName || "Pasien";
+    const phone = patient.demographics?.phone || "";
+    const cleanPhone = phone.replace(/[^0-9]/g, "");
+    let phoneParam = cleanPhone;
+    if (phoneParam.startsWith("0")) {
+      phoneParam = "62" + phoneParam.slice(1);
+    }
+    const visitDate = patient.createdAt ? new Date(patient.createdAt) : new Date();
+    const nextDate = new Date(visitDate);
+    nextDate.setMonth(nextDate.getMonth() + 6);
+    const formattedDate = nextDate.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const text = `Halo Bapak/Ibu ${fullName},\n\nSalam dari Tim Kesehatan Gigi ASIDENT! 🦷✨\n\nIni adalah pengingat jadwal kontrol gigi rutin 6 bulan Anda yang jatuh tempo pada: *${formattedDate}*.\n\n*Anjuran Penting untuk Kesehatan Gigi Anda:*\n1. 🥦 *Perbanyak Konsumsi Buah & Sayur Berserat*: Mengunyah buah renyah seperti apel, pir, bengkuang, dan sayuran hijau membantu membersihkan sisa makanan dan plak secara alami (self-cleansing action).\n2. 🪥 *Sikat Gigi 2x Sehari*: Pagi setelah sarapan & malam sebelum tidur dengan pasta gigi fluoride.\n3. 🗓️ *Pembersihan Karang Gigi (Scaling)*: Karang gigi hanya dapat dibersihkan di klinik untuk menjaga gusi tetap sehat dan tidak goyang.\n\nSilakan hubungi kami untuk konfirmasi jadwal kunjungan Anda. Terima kasih! 🙏`;
+
+    window.open(`https://wa.me/${phoneParam}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const filteredAssessments = assessments.filter(a => {
@@ -296,33 +414,42 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <button 
+                        onClick={() => setSelectedReminderPatient(a)}
+                        className="flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3.5 py-3 text-xs font-black text-emerald-700 hover:bg-emerald-100 transition-all border border-emerald-200 active:scale-95"
+                        title="Lihat & Kirim Pengingat Pasien"
+                      >
+                        <Apple className="h-4 w-4 text-emerald-600" />
+                        REMINDER
+                      </button>
                       <button 
                         onClick={() => showProgress(a.demographics?.fullName, a.demographics?.phone)}
-                        className="flex items-center gap-2 rounded-xl bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-600 hover:bg-indigo-100 transition-all"
+                        className="flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3.5 py-3 text-xs font-black text-indigo-600 hover:bg-indigo-100 transition-all active:scale-95"
                       >
                         <TrendingUp className="h-4 w-4" />
                         PROGRES
                       </button>
                       <button 
                         onClick={() => navigate("/assessment", { state: { patientData: a, isEditing: true } })}
-                        className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-black text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-3 text-xs font-black text-white hover:bg-blue-700 shadow-md shadow-blue-200 transition-all active:scale-95"
                       >
                         <ExternalLink className="h-4 w-4" />
                         EDIT DATA
                       </button>
                       <button 
                         onClick={() => navigate("/assessment", { state: { patientData: a, isNewVisit: true } })}
-                        className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-6 py-3 text-sm font-black text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all active:scale-95"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-4 py-3 text-xs font-black text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all active:scale-95"
                       >
                         <Plus className="h-4 w-4" />
                         KUNJUNGAN BARU
                       </button>
                       <button 
                         onClick={() => handleDelete(a.id, a.demographics?.fullName || 'Tanpa Nama', a.createdAt, a.examiner || 'Tidak Diketahui', a.updatedAt)}
-                        className="rounded-xl bg-red-50 p-2 text-red-500 hover:bg-red-100 transition-all"
+                        className="rounded-xl bg-red-50 p-2.5 text-red-500 hover:bg-red-100 transition-all"
+                        title="Hapus Rekam Medis"
                       >
-                        <Trash2 className="h-5 w-5" />
+                        <Trash2 className="h-4.5 w-4.5" />
                       </button>
                     </div>
                   </div>
@@ -426,6 +553,143 @@ export default function PatientDatabase({ user, onLogout }: { user: any, onLogou
             </motion.div>
           </div>
         )}
+
+        {/* Patient Reminder & Recall Modal */}
+        {selectedReminderPatient && (() => {
+          const p = selectedReminderPatient;
+          const fullName = p.demographics?.fullName || "Pasien";
+          const phone = p.demographics?.phone || "";
+          const visitDate = p.createdAt ? new Date(p.createdAt) : new Date();
+          const nextRecall = new Date(visitDate);
+          nextRecall.setMonth(nextRecall.getMonth() + 6);
+          const now = new Date();
+          const diffDays = Math.round((nextRecall.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          const isDue = diffDays <= 0;
+          const isUpcoming = diffDays > 0 && diffDays <= 30;
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSelectedReminderPatient(null)}
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] bg-white p-8 md:p-10 shadow-2xl z-10"
+              >
+                <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                      <Apple className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900 tracking-tight">Pengingat Pasien & Recall 6 Bulan</h3>
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">ASIDENT Care & Lifestyle Follow-Up</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedReminderPatient(null)}
+                    className="rounded-full bg-slate-100 p-2.5 text-slate-500 hover:bg-slate-200 transition-all"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Patient Info Card */}
+                <div className="mb-6 rounded-2xl bg-slate-50 p-4 border border-slate-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-slate-400">Data Pasien</span>
+                    <h4 className="text-base font-black text-slate-900">{fullName}</h4>
+                    <p className="text-xs text-slate-500 font-semibold">{phone || "Nomor telepon belum tercatat"}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-black uppercase text-slate-400">Kunjungan Terakhir</span>
+                    <p className="text-xs font-black text-slate-700">
+                      {visitDate.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 6-Month Recall Status Banner */}
+                <div className={cn(
+                  "mb-6 rounded-2xl p-5 border-2 flex items-center justify-between",
+                  isDue 
+                    ? "bg-red-50 border-red-200 text-red-950" 
+                    : isUpcoming 
+                    ? "bg-amber-50 border-amber-200 text-amber-950"
+                    : "bg-blue-50 border-blue-200 text-blue-950"
+                )}>
+                  <div>
+                    <div className="text-[11px] font-black uppercase tracking-wider mb-1 opacity-80">
+                      Jadwal Kontrol 6 Bulan Rutin
+                    </div>
+                    <div className="text-lg font-black">
+                      {nextRecall.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                    </div>
+                    <p className="text-xs font-semibold mt-0.5 opacity-90">
+                      {isDue 
+                        ? "Waktunya kontrol rutin! Sudah melewati 6 bulan sejak pemeriksaan terakhir."
+                        : isUpcoming 
+                        ? `Mendekati jadwal kontrol (${diffDays} hari lagi). Disarankan segera follow-up pasien.`
+                        : `Jadwal terkontrol (${diffDays} hari lagi).`}
+                    </p>
+                  </div>
+                  <div className="h-10 w-10 rounded-xl bg-white/80 flex items-center justify-center shrink-0 shadow-sm">
+                    {isDue ? <Clock className="h-5 w-5 text-red-600" /> : <Clock className="h-5 w-5 text-blue-600" />}
+                  </div>
+                </div>
+
+                {/* Anjuran Edukasi Pasien */}
+                <div className="mb-6 space-y-2.5">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                    Anjuran Penting untuk Pasien:
+                  </span>
+                  <div className="rounded-xl bg-emerald-50/80 p-3.5 border border-emerald-100 flex items-start gap-2.5 text-xs text-emerald-950">
+                    <Apple className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span><strong>Perbanyak Buah & Sayur Berserat:</strong> Mengunyah apel, bengkuang, dan pir memicu air liur (saliva) dan membersihkan sisa plak secara alami (self-cleansing).</span>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-3 border border-slate-100 flex items-start gap-2.5 text-xs text-slate-700">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span><strong>Sikat Gigi 2x Sehari:</strong> Pagi setelah sarapan & malam sebelum tidur dengan pasta fluoride.</span>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-3 border border-slate-100 flex items-start gap-2.5 text-xs text-slate-700">
+                    <CheckCircle2 className="h-4 w-4 text-purple-600 shrink-0 mt-0.5" />
+                    <span><strong>Scaling 6 Bulan Sekali:</strong> Pembersihan karang gigi klinis untuk mencegah radang gusi dan gigi goyang.</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-slate-100">
+                  {phone ? (
+                    <button
+                      onClick={() => handleSendWhatsAppReminder(p)}
+                      className="w-full sm:flex-1 flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3.5 text-xs font-black text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Kirim Reminder WhatsApp
+                    </button>
+                  ) : (
+                    <div className="text-xs text-amber-600 font-bold bg-amber-50 p-2.5 rounded-xl border border-amber-200 w-full text-center">
+                      Nomor HP pasien belum terdaftar untuk WhatsApp
+                    </div>
+                  )}
+                  <button
+                    onClick={() => handlePrintPatientReminder(p)}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-3.5 text-xs font-black text-white hover:bg-slate-800 transition-all active:scale-95"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Cetak Lembar Pengingat
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
     </div>
   );

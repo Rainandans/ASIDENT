@@ -104,7 +104,7 @@ export default function App() {
             />
             <Route 
               path="/education" 
-              element={user ? <EducationPage onLogout={handleLogout} /> : <Navigate to="/login" />} 
+              element={user ? <EducationPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} 
             />
             <Route 
               path="/billing" 
@@ -112,7 +112,7 @@ export default function App() {
             />
             <Route 
               path="/notifications" 
-              element={user ? <NotificationPage onLogout={handleLogout} /> : <Navigate to="/login" />} 
+              element={user ? <NotificationPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} 
             />
             <Route 
               path="/users" 

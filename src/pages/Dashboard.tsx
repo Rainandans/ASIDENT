@@ -18,7 +18,10 @@ import {
   ChevronRight,
   PieChart as PieChartIcon,
   BarChart as BarChartIcon,
-  Filter
+  Filter,
+  Apple,
+  Sparkles,
+  Clock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
@@ -341,6 +344,47 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 </div>
               </motion.div>
             ))}
+          </div>
+          
+          {/* Reminder & Health Habit Banner (Pasien & Operator) */}
+          <div className="mb-12 rounded-[2.5rem] bg-gradient-to-br from-emerald-600 via-teal-700 to-blue-800 p-8 text-white shadow-xl shadow-emerald-900/10 relative overflow-hidden">
+            <div className="absolute -right-8 -top-8 h-48 w-48 rounded-full bg-white/10 blur-xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-xl bg-white/20 backdrop-blur-md px-3 py-1 text-[11px] font-black uppercase tracking-wider mb-3">
+                  <Apple className="h-4 w-4 text-amber-300" />
+                  Pengingat Kesehatan Gigi & Mulut Pasien
+                </div>
+                <h3 className="text-2xl font-black tracking-tight mb-2">
+                  Perbanyak Makanan Berserat & Kontrol Rutin 6 Bulan Sekali
+                </h3>
+                <p className="text-xs md:text-sm text-emerald-50 leading-relaxed font-medium">
+                  Mengunyah buah renyah (apel, bengkuang, pir) memicu air liur (saliva) yang bertindak sebagai pembersih alami (self-cleansing) dan penangkal asam bakteri. Jangan lupa sikat gigi 2x sehari dan periksa gigi tiap 6 bulan!
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-bold text-white/90">
+                  <span className="rounded-lg bg-black/20 px-2.5 py-1">🥦 Buah & Sayur Berserat</span>
+                  <span className="rounded-lg bg-black/20 px-2.5 py-1">🗓️ Kontrol Tiap 6 Bulan</span>
+                  <span className="rounded-lg bg-black/20 px-2.5 py-1">🪥 Sikat Gigi 2x Sehari</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+                <button
+                  onClick={() => navigate("/notifications")}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 font-black text-xs text-emerald-900 hover:bg-emerald-50 shadow-lg active:scale-95 transition-all uppercase tracking-wider"
+                >
+                  <Apple className="h-4 w-4 text-emerald-700" />
+                  Buka Pengingat Lengkap
+                </button>
+                <button
+                  onClick={() => navigate("/education")}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-white/15 backdrop-blur-md px-6 py-4 font-black text-xs text-white hover:bg-white/25 active:scale-95 transition-all uppercase tracking-wider"
+                >
+                  <Sparkles className="h-4 w-4 text-amber-300" />
+                  Edukasi Kelompok
+                </button>
+              </div>
+            </div>
           </div>
           
           {/* Charts Section */}

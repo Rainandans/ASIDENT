@@ -138,8 +138,10 @@ const getInitialFormState = () => ({
       symptoms: { 
         sensitive: false, jawPain: false, toothache: false, gumPain: false, 
         bleeding: false, chewingDifficulty: false, looseFilling: false,
-        dryMouth: false, badBreath: false, burning: false, swelling: false, recedingGums: false
+        dryMouth: false, badBreath: false, burning: false, swelling: false, recedingGums: false,
+        looseTooth: false, decubitusUlcer: false
       },
+      symptomsDetails: {} as Record<string, string>,
       grinding: false,
       biteGuard: false,
       appearanceConcern: false,
@@ -148,8 +150,9 @@ const getInitialFormState = () => ({
       injuryExplanation: "",
       prevProcedures: { 
         calculus: false, extraction: false, rootCanal: false, gumSurgery: false, braces: false, 
-        radiation: false, jawSurgery: false, headNeckPain: false, bleedingPostOp: false, others: ""
+        radiation: false, jawSurgery: false, headNeckPain: false, bleedingPostOp: false, others: false
       },
+      prevProceduresDetails: {} as Record<string, string>,
       maintenance: { 
         brushFreq: "",
         brushTime: { morning: false, bath: false, beforeSleep: false, afterMeal: false },
@@ -188,13 +191,13 @@ const getInitialFormState = () => ({
   },
   vitals: { bp: "", pulse: "", resp: "" },
   extraIntraOral: { 
-    extra: { face: "Normal", neck: "Normal", vermilion: "Normal", parotid: "Normal", lymph: "Normal", cervical: "Normal", submental: "Normal", submandibular: "Normal", supraclavicular: "Normal" },
-    intra: { labialMucosa: "Normal", labialVestibule: "Normal", anteriorGingiva: "Normal", buccalVestibule: "Normal", buccalGingiva: "Normal", tongueDorsal: "Normal", tongueVentral: "Normal", tongueLateral: "Normal", tonsils: "Normal", floorMouth: "Normal", lingualGingiva: "Normal", tonsillarPillars: "Normal", pharyngealWall: "Normal", softPalate: "Normal", uvula: "Normal", hardPalate: "Normal", palatalGingiva: "Normal", submandibularGlands: "Normal" },
+    extra: { face: "Normal", vermilion: "Normal", parotid: "Normal", submental: "Normal", submandibular: "Normal", cervical: "Normal", supraclavicular: "Normal", lymph: "Normal", neck: "Normal" },
+    intra: { labialMucosa: "Normal", labialVestibule: "Normal", buccalVestibule: "Normal", anteriorGingiva: "Normal", buccalGingiva: "Normal", palatalGingiva: "Normal", lingualGingiva: "Normal", hardPalate: "Normal", softPalate: "Normal", uvula: "Normal", tongueDorsal: "Normal", tongueVentral: "Normal", tongueLateral: "Normal", floorMouth: "Normal", submandibularGlands: "Normal", tonsils: "Normal", tonsillarPillars: "Normal", pharyngealWall: "Normal" },
     notes: ""
   },
   ohis: { 
-    debris: { 16: 0, 11: 0, 26: 0, 36: 0, 31: 0, 46: 0 },
-    calculus: { 16: 0, 11: 0, 26: 0, 36: 0, 31: 0, 46: 0 },
+    debris: { 16: 0, 17: 0, 18: 0, 11: 0, 21: 0, 26: 0, 27: 0, 28: 0, 36: 0, 37: 0, 38: 0, 31: 0, 41: 0, 46: 0, 47: 0, 48: 0 },
+    calculus: { 16: 0, 17: 0, 18: 0, 11: 0, 21: 0, 26: 0, 27: 0, 28: 0, 36: 0, 37: 0, 38: 0, 31: 0, 41: 0, 46: 0, 47: 0, 48: 0 },
     indexTeeth: { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" }
   },
   plaqueControl: {
@@ -394,11 +397,12 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     try {
       // Calculate final scores
       const indexTeeth = data.ohis?.indexTeeth || { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" };
-      const teeth = Object.values(indexTeeth);
+      const teeth = Object.values(indexTeeth).filter((t: any) => t && t !== "-");
       const dValues = teeth.map(t => Number(data.ohis?.debris?.[t as string] || 0));
       const cValues = teeth.map(t => Number(data.ohis?.calculus?.[t as string] || 0));
-      const di = dValues.reduce((a, b) => a + b, 0) / 6;
-      const ci = cValues.reduce((a, b) => a + b, 0) / 6;
+      const count = teeth.length > 0 ? teeth.length : 1;
+      const di = teeth.length > 0 ? (dValues.reduce((a, b) => a + b, 0) / count) : 0;
+      const ci = teeth.length > 0 ? (cValues.reduce((a, b) => a + b, 0) / count) : 0;
       const ohisScore = Number((di + ci).toFixed(2));
 
       const surfaces = data.plaqueControl?.surfaces || [];
@@ -617,13 +621,13 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
     setValue("header.visitDate", new Date().toISOString().split('T')[0]);
     setValue("vitals", { bp: "", pulse: "", resp: "" });
     setValue("extraIntraOral", { 
-      extra: { face: "Normal", neck: "Normal", vermilion: "Normal", parotid: "Normal", lymph: "Normal", cervical: "Normal", submental: "Normal", submandibular: "Normal", supraclavicular: "Normal" },
-      intra: { labialMucosa: "Normal", labialVestibule: "Normal", anteriorGingiva: "Normal", buccalVestibule: "Normal", buccalGingiva: "Normal", tongueDorsal: "Normal", tongueVentral: "Normal", tongueLateral: "Normal", tonsils: "Normal", floorMouth: "Normal", lingualGingiva: "Normal", tonsillarPillars: "Normal", pharyngealWall: "Normal", softPalate: "Normal", uvula: "Normal", hardPalate: "Normal", palatalGingiva: "Normal", submandibularGlands: "Normal" },
+      extra: { face: "Normal", vermilion: "Normal", parotid: "Normal", submental: "Normal", submandibular: "Normal", cervical: "Normal", supraclavicular: "Normal", lymph: "Normal", neck: "Normal" },
+      intra: { labialMucosa: "Normal", labialVestibule: "Normal", buccalVestibule: "Normal", anteriorGingiva: "Normal", buccalGingiva: "Normal", palatalGingiva: "Normal", lingualGingiva: "Normal", hardPalate: "Normal", softPalate: "Normal", uvula: "Normal", tongueDorsal: "Normal", tongueVentral: "Normal", tongueLateral: "Normal", floorMouth: "Normal", submandibularGlands: "Normal", tonsils: "Normal", tonsillarPillars: "Normal", pharyngealWall: "Normal" },
       notes: ""
     });
     setValue("ohis", { 
-      debris: { 16: 0, 11: 0, 26: 0, 36: 0, 31: 0, 46: 0 },
-      calculus: { 16: 0, 11: 0, 26: 0, 36: 0, 31: 0, 46: 0 },
+      debris: { 16: 0, 17: 0, 18: 0, 11: 0, 21: 0, 26: 0, 27: 0, 28: 0, 36: 0, 37: 0, 38: 0, 31: 0, 41: 0, 46: 0, 47: 0, 48: 0 },
+      calculus: { 16: 0, 17: 0, 18: 0, 11: 0, 21: 0, 26: 0, 27: 0, 28: 0, 36: 0, 37: 0, 38: 0, 31: 0, 41: 0, 46: 0, 47: 0, 48: 0 },
       indexTeeth: { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" }
     });
     setValue("plaqueControl.surfaces", Array(128).fill(false));
@@ -1025,8 +1029,11 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                       </div>
                     </div>
 
-                    <div className="space-y-3 border-t border-slate-100 pt-4">
-                      <label className="text-sm font-bold text-slate-700">7. Apakah Anda merasakan gejala berikut?</label>
+                    <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <div>
+                        <label className="text-sm font-bold text-slate-700">7. Apakah Anda merasakan gejala berikut?</label>
+                        <p className="text-xs text-slate-400 mt-0.5">Pilih semua gejala yang dirasakan. Keterangan tambahan (waktu & kondisi) akan muncul di bawah.</p>
+                      </div>
                       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                         <CheckboxGroup label="Gigi Sensitif" register={register("healthHistory.dental.symptoms.sensitive")} />
                         <CheckboxGroup label="Nyeri Rahang" register={register("healthHistory.dental.symptoms.jawPain")} />
@@ -1040,7 +1047,51 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                         <CheckboxGroup label="Rasa Terbakar" register={register("healthHistory.dental.symptoms.burning")} />
                         <CheckboxGroup label="Bengkak" register={register("healthHistory.dental.symptoms.swelling")} />
                         <CheckboxGroup label="Gusi Menyusut" register={register("healthHistory.dental.symptoms.recedingGums")} />
+                        <CheckboxGroup label="Gigi Goyang" register={register("healthHistory.dental.symptoms.looseTooth")} />
+                        <CheckboxGroup label="Mukosa Tertusuk Gigi (Ulkus Dekubitus)" register={register("healthHistory.dental.symptoms.decubitusUlcer")} />
                       </div>
+
+                      {/* Detail inputs for selected symptoms (waktu, lokasi, kondisi) */}
+                      {(() => {
+                        const symptomsDetailConfig = [
+                          { key: "sensitive", label: "Gigi Sensitif", prompt: "Jelaskan Gigi Sensitif (Waktu timbul, lokasi gigi, pemicu dingin/manis/asam)" },
+                          { key: "jawPain", label: "Nyeri Rahang", prompt: "Jelaskan Nyeri Rahang (Waktu kambuh, sisi kiri/kanan, bagaimana rasanya)" },
+                          { key: "toothache", label: "Sakit Gigi", prompt: "Jelaskan Sakit Gigi (Waktu timbul/sejak kapan, gigi mana, sifat nyeri: berdenyut/hilang-timbul)" },
+                          { key: "gumPain", label: "Gusi Sakit", prompt: "Jelaskan Gusi Sakit (Waktu/sejak kapan, lokasi gusi, bagaimana kondisinya)" },
+                          { key: "bleeding", label: "Gusi Berdarah", prompt: "Jelaskan Gusi Berdarah (Kapan berdarah: saat sikat/spontan, lokasi, sejak kapan)" },
+                          { key: "chewingDifficulty", label: "Sulit Mengunyah", prompt: "Jelaskan Sulit Mengunyah (Sisi mana, makanan apa yang memicu, sejak kapan)" },
+                          { key: "looseFilling", label: "Tambalan Lepas", prompt: "Jelaskan Tambalan Lepas (Gigi mana yang lepas, kapan waktu kejadiannya)" },
+                          { key: "dryMouth", label: "Mulut Kering", prompt: "Jelaskan Mulut Kering (Waktu terasa kering, sejak kapan, ada riwayat obat tertentu)" },
+                          { key: "badBreath", label: "Bau Mulut", prompt: "Jelaskan Bau Mulut (Waktu/sejak kapan dirasakan, bagaimana keadaannya)" },
+                          { key: "burning", label: "Rasa Terbakar", prompt: "Jelaskan Rasa Terbakar (Waktu timbul, lokasi pada rongga mulut, sejak kapan)" },
+                          { key: "swelling", label: "Bengkak", prompt: "Jelaskan Bengkak (Waktu/sejak kapan timbul, lokasi pembengkakan, ada nyeri tekan)" },
+                          { key: "recedingGums", label: "Gusi Menyusut", prompt: "Jelaskan Gusi Menyusut (Waktu disadari, regio gigi mana, apakah disertai ngilu)" },
+                          { key: "looseTooth", label: "Gigi Goyang", prompt: "Jelaskan Gigi Goyang (Waktu/sejak kapan goyang, gigi nomor mana, derajat kegoyangan)" },
+                          { key: "decubitusUlcer", label: "Mukosa Tertusuk Gigi (Ulkus Dekubitus)", prompt: "Jelaskan Mukosa Tertusuk Gigi (Waktu timbul, lokasi ulkus/pipi/lidah, gigi tajam penyebab)" },
+                        ];
+                        const activeSymptoms = symptomsDetailConfig.filter(s => watch(`healthHistory.dental.symptoms.${s.key}` as any));
+                        if (activeSymptoms.length === 0) return null;
+
+                        return (
+                          <div className="mt-4 rounded-2xl border-2 border-blue-100 bg-blue-50/40 p-5 space-y-4">
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">i</span>
+                              <h4 className="text-xs font-black uppercase tracking-wider text-blue-900">Keterangan Tambahan Gejala yang Dipilih (Waktu & Kondisi)</h4>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {activeSymptoms.map(item => (
+                                <InputGroup 
+                                  key={item.key} 
+                                  label={item.prompt} 
+                                  register={register(`healthHistory.dental.symptomsDetails.${item.key}` as any)} 
+                                  placeholder="Tuliskan waktu/sejak kapan, lokasi spesifik, dan bagaimana kondisinya..."
+                                  isTextArea 
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 md:grid-cols-2">
@@ -1065,8 +1116,11 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                       )}
                     </div>
 
-                    <div className="space-y-3 border-t border-slate-100 pt-4">
-                      <label className="text-sm font-bold text-slate-700">12. Apakah anda pernah mengalami/menggunakan hal hal berikut?</label>
+                    <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <div>
+                        <label className="text-sm font-bold text-slate-700">12. Apakah anda pernah mengalami/menggunakan hal hal berikut?</label>
+                        <p className="text-xs text-slate-400 mt-0.5">Pilih riwayat tindakan atau kondisi yang pernah dialami.</p>
+                      </div>
                       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                         <CheckboxGroup label="Karang gigi" register={register("healthHistory.dental.prevProcedures.calculus")} />
                         <CheckboxGroup label="Pencabutan gigi" register={register("healthHistory.dental.prevProcedures.extraction")} />
@@ -1079,6 +1133,44 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                         <CheckboxGroup label="Pendarahan lama pasca cabut" register={register("healthHistory.dental.prevProcedures.bleedingPostOp")} />
                         <CheckboxGroup label="Lain-lain" register={register("healthHistory.dental.prevProcedures.others")} />
                       </div>
+
+                      {/* Detail inputs for selected procedures (waktu, tindakan & kondisi) */}
+                      {(() => {
+                        const proceduresDetailConfig = [
+                          { key: "calculus", label: "Karang gigi", prompt: "Jelaskan Riwayat Karang Gigi (Waktu terakhir scaling, lokasi karang gigi, keluhan)" },
+                          { key: "extraction", label: "Pencabutan gigi", prompt: "Jelaskan Riwayat Pencabutan Gigi (Waktu pencabutan terakhir, gigi mana, riwayat penyembuhan)" },
+                          { key: "rootCanal", label: "Perawatan saluran akar", prompt: "Jelaskan Perawatan Saluran Akar (Gigi mana yang dirawat, waktu perawatan, status saat ini)" },
+                          { key: "gumSurgery", label: "Operasi gusi", prompt: "Jelaskan Operasi Gusi (Waktu operasi, area mana, indikasi operasi)" },
+                          { key: "braces", label: "Kawat gigi (Behel)", prompt: "Jelaskan Penggunaan Kawat Gigi (Waktu pemasangan, rahang atas/bawah, status perawatan saat ini)" },
+                          { key: "radiation", label: "Terapi radiasi kepala/leher", prompt: "Jelaskan Terapi Radiasi (Waktu pelaksanaan terapi, area radiasi, efek pada rongga mulut)" },
+                          { key: "jawSurgery", label: "Operasi rahang", prompt: "Jelaskan Operasi Rahang (Waktu operasi, jenis tindakan/indikasi, bagaimana kondisi saat ini)" },
+                          { key: "headNeckPain", label: "Rasa sakit kepala/leher", prompt: "Jelaskan Sakit Kepala/Leher (Waktu timbul, frekuensi, durasi, dan bagaimana pemicunya)" },
+                          { key: "bleedingPostOp", label: "Pendarahan lama pasca cabut", prompt: "Jelaskan Pendarahan Lama Pasca Cabut (Waktu kejadian, berapa lama pendarahan terjadi, penanganan)" },
+                          { key: "others", label: "Lain-lain", prompt: "Jelaskan Riwayat / Kondisi Lain (Waktu kejadian, bagaimana kondisinya, dan tindakan yang pernah didapat)" },
+                        ];
+                        const activeProcedures = proceduresDetailConfig.filter(p => watch(`healthHistory.dental.prevProcedures.${p.key}` as any));
+                        if (activeProcedures.length === 0) return null;
+
+                        return (
+                          <div className="mt-4 rounded-2xl border-2 border-blue-100 bg-blue-50/40 p-5 space-y-4">
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">i</span>
+                              <h4 className="text-xs font-black uppercase tracking-wider text-blue-900">Keterangan Tambahan Riwayat Tindakan yang Dipilih (Waktu & Kondisi)</h4>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {activeProcedures.map(item => (
+                                <InputGroup 
+                                  key={item.key} 
+                                  label={item.prompt} 
+                                  register={register(`healthHistory.dental.prevProceduresDetails.${item.key}` as any)} 
+                                  placeholder="Tuliskan waktu/sejak kapan, riwayat tindakan medis, dan bagaimana kondisinya saat ini..."
+                                  isTextArea 
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1250,17 +1342,18 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                 <div>
                   <SectionHeader title="Pemeriksaan Ekstra Oral" icon={Stethoscope} />
                   <div className="mt-6 space-y-6 rounded-[2rem] bg-white p-8 border border-slate-100 shadow-xl shadow-blue-900/5">
+                    <p className="text-xs font-semibold text-slate-400">Urutan inspeksi & palpasi klinis: Wajah ➔ Bibir ➔ Kelenjar Saliva ➔ Rantai Kelenjar Getah Bening ➔ Leher</p>
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                       {[
-                        { id: "face", label: "Wajah" },
-                        { id: "neck", label: "Leher" },
-                        { id: "vermilion", label: "Batas Vermilion" },
-                        { id: "parotid", label: "Kelenjar Parotis" },
-                        { id: "lymph", label: "Kelenjar Limfe" },
-                        { id: "cervical", label: "Servikal" },
-                        { id: "submental", label: "Submental" },
-                        { id: "submandibular", label: "Submandibular" },
-                        { id: "supraclavicular", label: "Supraclavicular" }
+                        { id: "face", label: "1. Wajah (Simetri & Profil)" },
+                        { id: "vermilion", label: "2. Batas Vermilion (Bibir)" },
+                        { id: "parotid", label: "3. Kelenjar Parotis" },
+                        { id: "submental", label: "4. Kelenjar Submental" },
+                        { id: "submandibular", label: "5. Kelenjar Submandibular" },
+                        { id: "cervical", label: "6. Kelenjar Servikal" },
+                        { id: "supraclavicular", label: "7. Kelenjar Supraclavicular" },
+                        { id: "lymph", label: "8. Kelenjar Limfe Lainnya" },
+                        { id: "neck", label: "9. Leher (Kondisi Umum)" }
                       ].map(field => (
                         <div key={field.id} className="space-y-1">
                           <label className="text-xs font-bold text-slate-700">{field.label}</label>
@@ -1277,40 +1370,73 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
 
                 <div>
                   <SectionHeader title="Pemeriksaan Intra Oral" icon={Stethoscope} />
-                  <div className="mt-6 space-y-6 rounded-[2rem] bg-white p-8 border border-slate-100 shadow-xl shadow-blue-900/5">
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                      {[
-                        { id: "labialMucosa", label: "Mukosa Labial" },
-                        { id: "labialVestibule", label: "Vestibulum Labial" },
-                        { id: "anteriorGingiva", label: "Gingiva Anterior" },
-                        { id: "buccalVestibule", label: "Vestibulum Bukal" },
-                        { id: "buccalGingiva", label: "Gingiva Bukal" },
-                        { id: "tongueDorsal", label: "Dorsum Lidah" },
-                        { id: "tongueVentral", label: "Ventral Lidah" },
-                        { id: "tongueLateral", label: "Lateral Lidah" },
-                        { id: "tonsils", label: "Tonsil" },
-                        { id: "floorMouth", label: "Dasar Mulut" },
-                        { id: "lingualGingiva", label: "Gingiva Lingual" },
-                        { id: "tonsillarPillars", label: "Pilar Tonsil" },
-                        { id: "pharyngealWall", label: "Dinding Faring" },
-                        { id: "softPalate", label: "Palatum Lunak" },
-                        { id: "uvula", label: "Uvula" },
-                        { id: "hardPalate", label: "Palatum Keras" },
-                        { id: "palatalGingiva", label: "Gingiva Palatal" },
-                        { id: "submandibularGlands", label: "Kelenjar Submandibular" }
-                      ].map(field => (
-                        <div key={field.id} className="space-y-1">
-                          <label className="text-xs font-bold text-slate-700">{field.label}</label>
-                          <select {...register(`extraIntraOral.intra.${field.id}` as any)} className="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-blue-500 focus:bg-white transition-all">
-                            <option value="Normal">Normal</option>
-                            <option value="Abnormal">Abnormal</option>
-                            <option value="Tidak Diperiksa">Tidak Diperiksa</option>
-                          </select>
+                  <div className="mt-6 space-y-8 rounded-[2rem] bg-white p-8 border border-slate-100 shadow-xl shadow-blue-900/5">
+                    <p className="text-xs font-semibold text-slate-400">Urutan pemeriksaan intra oral klinis dari anterior ke posterior: Bibir/Vestibulum ➔ Gingiva ➔ Palatum ➔ Lidah & Dasar Mulut ➔ Orofaring</p>
+                    
+                    {[
+                      {
+                        groupTitle: "A. Bibir & Pintu Rongga Mulut (Labial & Bukal)",
+                        fields: [
+                          { id: "labialMucosa", label: "Mukosa Labial" },
+                          { id: "labialVestibule", label: "Vestibulum Labial" },
+                          { id: "buccalVestibule", label: "Vestibulum Bukal" },
+                        ]
+                      },
+                      {
+                        groupTitle: "B. Jaringan Gusi (Gingiva Rahang Atas & Bawah)",
+                        fields: [
+                          { id: "anteriorGingiva", label: "Gingiva Anterior" },
+                          { id: "buccalGingiva", label: "Gingiva Bukal" },
+                          { id: "palatalGingiva", label: "Gingiva Palatal" },
+                          { id: "lingualGingiva", label: "Gingiva Lingual" },
+                        ]
+                      },
+                      {
+                        groupTitle: "C. Langit-Langit Rongga Mulut (Palatum & Uvula)",
+                        fields: [
+                          { id: "hardPalate", label: "Palatum Keras" },
+                          { id: "softPalate", label: "Palatum Lunak" },
+                          { id: "uvula", label: "Uvula" },
+                        ]
+                      },
+                      {
+                        groupTitle: "D. Lidah, Dasar Mulut & Kelenjar Saliva",
+                        fields: [
+                          { id: "tongueDorsal", label: "Dorsum Lidah" },
+                          { id: "tongueVentral", label: "Ventral Lidah" },
+                          { id: "tongueLateral", label: "Lateral Lidah" },
+                          { id: "floorMouth", label: "Dasar Mulut" },
+                          { id: "submandibularGlands", label: "Kelenjar Submandibular (Muara Saliva)" },
+                        ]
+                      },
+                      {
+                        groupTitle: "E. Faring & Bagian Belakang Tenggorokan (Orofaring)",
+                        fields: [
+                          { id: "tonsils", label: "Tonsil" },
+                          { id: "tonsillarPillars", label: "Pilar Tonsil" },
+                          { id: "pharyngealWall", label: "Dinding Faring" },
+                        ]
+                      }
+                    ].map((group, gIdx) => (
+                      <div key={gIdx} className="space-y-3 border-t border-slate-100 pt-4 first:border-0 first:pt-0">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-blue-600">{group.groupTitle}</h4>
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                          {group.fields.map(field => (
+                            <div key={field.id} className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700">{field.label}</label>
+                              <select {...register(`extraIntraOral.intra.${field.id}` as any)} className="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-blue-500 focus:bg-white transition-all">
+                                <option value="Normal">Normal</option>
+                                <option value="Abnormal">Abnormal</option>
+                                <option value="Tidak Diperiksa">Tidak Diperiksa</option>
+                              </select>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
+
                     <div className="border-t border-slate-100 pt-4">
-                      <InputGroup label="Catatan Tambahan Pemeriksaan" register={register("extraIntraOral.notes")} isTextArea />
+                      <InputGroup label="Catatan Tambahan Pemeriksaan Ekstra & Intra Oral" register={register("extraIntraOral.notes")} isTextArea />
                     </div>
                   </div>
                 </div>
@@ -1332,23 +1458,27 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                   <SectionHeader title="Oral Hygiene Index (OHI-S)" icon={ClipboardList} />
                   <div className="mt-6 space-y-6 rounded-[2rem] bg-white p-8 border border-slate-100 shadow-xl shadow-blue-900/5">
                     <div className="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Pilih Gigi Indeks (Jika gigi utama tidak ada)</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Pilih Gigi Indeks (Termasuk Gigi Molar 3 / Gigi 8, atau (-) jika tidak ada gigi indeks)</p>
                       <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
                         {[
-                          { pos: "16/17", key: "tooth1" },
-                          { pos: "11/21", key: "tooth2" },
-                          { pos: "26/27", key: "tooth3" },
-                          { pos: "36/37", key: "tooth4" },
-                          { pos: "31/41", key: "tooth5" },
-                          { pos: "46/47", key: "tooth6" },
+                          { pos: "16/17/18", key: "tooth1", options: ["16", "17", "18", "-"] },
+                          { pos: "11/21", key: "tooth2", options: ["11", "21", "-"] },
+                          { pos: "26/27/28", key: "tooth3", options: ["26", "27", "28", "-"] },
+                          { pos: "36/37/38", key: "tooth4", options: ["36", "37", "38", "-"] },
+                          { pos: "31/41", key: "tooth5", options: ["31", "41", "-"] },
+                          { pos: "46/47/48", key: "tooth6", options: ["46", "47", "48", "-"] },
                         ].map((item, idx) => (
                           <div key={idx} className="space-y-1">
-                            <label className="text-[8px] font-black text-slate-400 uppercase">{item.pos}</label>
+                            <label className="text-[9px] font-black text-slate-400 uppercase">{item.pos}</label>
                             <select 
                               {...register(`ohis.indexTeeth.${item.key}` as any)}
-                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold outline-none focus:border-blue-500"
+                              className="w-full rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold outline-none focus:border-blue-500 shadow-sm transition-all"
                             >
-                              {item.pos.split('/').map(t => <option key={t} value={t}>{t}</option>)}
+                              {item.options.map(t => (
+                                <option key={t} value={t}>
+                                  {t === "-" ? "- (Tidak ada)" : `Gigi ${t}`}
+                                </option>
+                              ))}
                             </select>
                           </div>
                         ))}
@@ -1361,6 +1491,16 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                         <div className="grid grid-cols-3 gap-4">
                           {["tooth1", "tooth2", "tooth3", "tooth4", "tooth5", "tooth6"].map((key) => {
                             const tooth = watch(`ohis.indexTeeth.${key}` as any) || (key === "tooth1" ? "16" : key === "tooth2" ? "11" : key === "tooth3" ? "26" : key === "tooth4" ? "36" : key === "tooth5" ? "31" : "46");
+                            if (tooth === "-") {
+                              return (
+                                <div key={key} className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-400">Gigi -</label>
+                                  <div className="w-full rounded-xl border-2 border-dashed border-slate-200 bg-slate-100 px-2 py-2.5 text-center text-xs font-bold text-slate-400">
+                                    (-) Tidak Ada
+                                  </div>
+                                </div>
+                              );
+                            }
                             return <InputGroup key={key} label={`Gigi ${tooth}`} register={register(`ohis.debris.${tooth}` as any)} type="number" step="0.1" />;
                           })}
                         </div>
@@ -1370,6 +1510,16 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                         <div className="grid grid-cols-3 gap-4">
                           {["tooth1", "tooth2", "tooth3", "tooth4", "tooth5", "tooth6"].map((key) => {
                             const tooth = watch(`ohis.indexTeeth.${key}` as any) || (key === "tooth1" ? "16" : key === "tooth2" ? "11" : key === "tooth3" ? "26" : key === "tooth4" ? "36" : key === "tooth5" ? "31" : "46");
+                            if (tooth === "-") {
+                              return (
+                                <div key={key} className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-400">Gigi -</label>
+                                  <div className="w-full rounded-xl border-2 border-dashed border-slate-200 bg-slate-100 px-2 py-2.5 text-center text-xs font-bold text-slate-400">
+                                    (-) Tidak Ada
+                                  </div>
+                                </div>
+                              );
+                            }
                             return <InputGroup key={key} label={`Gigi ${tooth}`} register={register(`ohis.calculus.${tooth}` as any)} type="number" step="0.1" />;
                           })}
                         </div>
@@ -1382,11 +1532,12 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                         <p className="text-4xl font-black text-blue-700 tracking-tighter">
                           {(() => {
                             const indexTeeth = watch("ohis.indexTeeth" as any) || { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" };
-                            const teeth = Object.values(indexTeeth);
+                            const teeth = Object.values(indexTeeth).filter((t: any) => t && t !== "-");
+                            if (teeth.length === 0) return "0.0";
                             const dValues = teeth.map(t => Number(watch(`ohis.debris.${t}` as any) || 0));
                             const cValues = teeth.map(t => Number(watch(`ohis.calculus.${t}` as any) || 0));
-                            const di = dValues.reduce((a, b) => a + b, 0) / 6;
-                            const ci = cValues.reduce((a, b) => a + b, 0) / 6;
+                            const di = dValues.reduce((a, b) => a + b, 0) / teeth.length;
+                            const ci = cValues.reduce((a, b) => a + b, 0) / teeth.length;
                             return (di + ci).toFixed(1);
                           })()}
                         </p>
@@ -1396,11 +1547,12 @@ export default function AssessmentForm({ user, onLogout }: AssessmentFormProps) 
                         <p className="text-2xl font-black text-blue-800">
                           {(() => {
                             const indexTeeth = watch("ohis.indexTeeth" as any) || { tooth1: "16", tooth2: "11", tooth3: "26", tooth4: "36", tooth5: "31", tooth6: "46" };
-                            const teeth = Object.values(indexTeeth);
+                            const teeth = Object.values(indexTeeth).filter((t: any) => t && t !== "-");
+                            if (teeth.length === 0) return "-";
                             const dValues = teeth.map(t => Number(watch(`ohis.debris.${t}` as any) || 0));
                             const cValues = teeth.map(t => Number(watch(`ohis.calculus.${t}` as any) || 0));
-                            const di = dValues.reduce((a, b) => a + b, 0) / 6;
-                            const ci = cValues.reduce((a, b) => a + b, 0) / 6;
+                            const di = dValues.reduce((a, b) => a + b, 0) / teeth.length;
+                            const ci = cValues.reduce((a, b) => a + b, 0) / teeth.length;
                             const total = di + ci;
                             if (total <= 1.2) return "BAIK";
                             if (total <= 3.0) return "SEDANG";
