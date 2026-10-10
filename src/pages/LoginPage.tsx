@@ -93,7 +93,26 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (captchaInput.toUpperCase() !== captcha) {
-      setError("Captcha salah!");
+      setError("Kode Captcha salah!");
+      return;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail) {
+      setError("Silakan masukkan alamat email.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      setError("Format email tidak valid. Pastikan penulisan email benar tanpa spasi (contoh: nama@gmail.com).");
+      return;
+    }
+
+    if (!cleanPassword || cleanPassword.length < 6) {
+      setError("Password minimal 6 karakter.");
       return;
     }
 
@@ -134,48 +153,55 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           assignedRole = "pemeriksa";
         }
 
-        // Create new user in Firebase Auth
-        const result = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(result.user, { displayName: fullName });
+        // Create new user in Firebase Auth with trimmed, lowercased email
+        const result = await createUserWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+        const displayName = fullName.trim() || cleanEmail.split('@')[0];
+        try {
+          await updateProfile(result.user, { displayName });
+        } catch (upErr) {
+          console.warn("Could not set displayName:", upErr);
+        }
         
         // Save user profile to Firestore
         try {
           await setDoc(doc(db, "users", result.user.uid), {
             uid: result.user.uid,
-            name: fullName,
-            email: email,
-            phone: phone || "",
-            nim: nim || "",
+            name: displayName,
+            email: cleanEmail,
+            phone: phone.trim() || "",
+            nim: nim.trim() || "",
             role: assignedRole,
             registeredAt: new Date().toISOString()
-          });
+          }, { merge: true });
         } catch (dbErr) {
           console.error("User profile document save notice:", dbErr);
         }
 
-        onLogin(fullName, assignedRole, email, result.user.uid);
+        onLogin(displayName, assignedRole, cleanEmail, result.user.uid);
       } else {
-        // Sign in existing user
-        const result = await signInWithEmailAndPassword(auth, email, password);
+        // Sign in existing user with trimmed, lowercased email
+        const result = await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
         const user = result.user;
 
         // Determine role from Firestore config & user profile
         let role = "pasien";
         try {
           const configDoc = await getDoc(doc(db, "config", "user_management"));
+          const userEmailLower = (user.email || cleanEmail).toLowerCase().trim();
+          
           if (configDoc.exists()) {
             const data = configDoc.data();
-            const adminEmails = data.adminEmails || ["rainandanabilatu@gmail.com"];
-            const examinerEmails = data.examinerEmails || [];
+            const adminEmails = (data.adminEmails || ["rainandanabilatu@gmail.com"]).map((e: string) => (e || "").toLowerCase().trim());
+            const examinerEmails = (data.examinerEmails || []).map((e: string) => (e || "").toLowerCase().trim());
             
-            if (adminEmails.includes(user.email)) {
+            if (adminEmails.includes(userEmailLower)) {
               role = "admin";
-            } else if (examinerEmails.includes(user.email)) {
+            } else if (examinerEmails.includes(userEmailLower)) {
               role = "pemeriksa";
             } else if (data.openExaminerAccess) {
               role = "pemeriksa";
             }
-          } else if (user.email === "rainandanabilatu@gmail.com") {
+          } else if (userEmailLower === "rainandanabilatu@gmail.com") {
             role = "admin";
           }
 
@@ -189,20 +215,28 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           console.error("Role read error on login:", e);
         }
 
-        onLogin(user.displayName || user.email?.split('@')[0] || "User", role, user.email || "", user.uid);
+        onLogin(user.displayName || user.email?.split('@')[0] || "User", role, user.email || cleanEmail, user.uid);
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      if (err.code === 'auth/email-already-in-use') {
-        setError("Email sudah terdaftar. Silakan pilih 'Login' di kanan atas.");
-      } else if (err.code === 'auth/invalid-credential') {
-        setError("Email atau password salah.");
+      if (err.code === 'auth/invalid-email') {
+        setError("Format email tidak valid. Pastikan penulisan email benar tanpa spasi (contoh: nama@gmail.com).");
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError("Email sudah terdaftar. Silakan pilih 'Login' di kanan atas untuk masuk.");
+      } else if (err.code === 'auth/user-not-found') {
+        setError("Akun belum terdaftar. Silakan klik 'Daftar' terlebih dahulu.");
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError("Email atau password tidak sesuai. Silakan periksa kembali.");
       } else if (err.code === 'auth/weak-password') {
         setError("Password terlalu lemah (minimal 6 karakter).");
       } else if (err.code === 'auth/operation-not-allowed') {
-        setError("Login email/password belum diaktifkan di Firebase Console.");
+        setError("Metode login email/password belum diaktifkan di Firebase Console.");
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Terlalu banyak percobaan gagal. Silakan tunggu beberapa saat sebelum mencoba lagi.");
+      } else if (err.code === 'auth/network-request-failed') {
+        setError("Koneksi gagal. Periksa jaringan internet perangkat Anda.");
       } else {
-        setError("Terjadi kesalahan. Silakan periksa kembali data Anda.");
+        setError(err.message || "Terjadi kesalahan saat otentikasi. Silakan periksa kembali data Anda.");
       }
     } finally {
       setIsLoading(false);
@@ -357,9 +391,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <input 
                   type="email" 
-                  placeholder="Email"
+                  placeholder="Email (contoh: nama@gmail.com)"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
                   className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50/50 pl-12 pr-5 py-4 text-sm font-bold outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                   required
                 />

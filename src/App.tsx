@@ -25,20 +25,21 @@ export default function App() {
         
         try {
           const configDoc = await getDoc(doc(db, "config", "user_management"));
+          const userEmailLower = (firebaseUser.email || "").trim().toLowerCase();
           
           if (configDoc.exists()) {
             const data = configDoc.data();
-            const adminEmails = data.adminEmails || ["rainandanabilatu@gmail.com"];
-            const examinerEmails = data.examinerEmails || [];
+            const adminEmails = (data.adminEmails || ["rainandanabilatu@gmail.com"]).map((e: string) => (e || "").trim().toLowerCase());
+            const examinerEmails = (data.examinerEmails || []).map((e: string) => (e || "").trim().toLowerCase());
             
-            if (adminEmails.includes(firebaseUser.email)) {
+            if (adminEmails.includes(userEmailLower)) {
               role = "admin";
-            } else if (examinerEmails.includes(firebaseUser.email)) {
+            } else if (examinerEmails.includes(userEmailLower)) {
               role = "pemeriksa";
             } else if (data.openExaminerAccess) {
               role = "pemeriksa";
             }
-          } else if (firebaseUser.email === "rainandanabilatu@gmail.com") {
+          } else if (userEmailLower === "rainandanabilatu@gmail.com") {
             role = "admin";
           }
 
