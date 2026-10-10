@@ -104,6 +104,12 @@ service cloud.firestore {
       );
     }
 
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAdmin();
+    }
+
     match /config/user_management {
       allow read: if isAuthenticated();
       allow write: if isAdmin();

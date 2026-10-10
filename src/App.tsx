@@ -21,21 +21,42 @@ export default function App() {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       if (firebaseUser) {
         // Fetch role from Firestore
-        const configDoc = await getDoc(doc(db, "config", "user_management"));
         let role = "pasien";
         
-        if (configDoc.exists()) {
-          const data = configDoc.data();
-          const adminEmails = data.adminEmails || ["rainandanabilatu@gmail.com"];
-          const examinerEmails = data.examinerEmails || [];
+        try {
+          const configDoc = await getDoc(doc(db, "config", "user_management"));
           
-          if (adminEmails.includes(firebaseUser.email)) {
+          if (configDoc.exists()) {
+            const data = configDoc.data();
+            const adminEmails = data.adminEmails || ["rainandanabilatu@gmail.com"];
+            const examinerEmails = data.examinerEmails || [];
+            
+            if (adminEmails.includes(firebaseUser.email)) {
+              role = "admin";
+            } else if (examinerEmails.includes(firebaseUser.email)) {
+              role = "pemeriksa";
+            } else if (data.openExaminerAccess) {
+              role = "pemeriksa";
+            }
+          } else if (firebaseUser.email === "rainandanabilatu@gmail.com") {
             role = "admin";
-          } else if (examinerEmails.includes(firebaseUser.email)) {
-            role = "pemeriksa";
           }
-        } else if (firebaseUser.email === "rainandanabilatu@gmail.com") {
-          role = "admin";
+
+          // If still "pasien", check individual user profile in Firestore
+          if (role !== "admin") {
+            const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+            if (userDoc.exists()) {
+              const uData = userDoc.data();
+              if (uData.role === "pemeriksa" || uData.role === "admin") {
+                role = uData.role;
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error reading user roles:", err);
+          if (firebaseUser.email === "rainandanabilatu@gmail.com") {
+            role = "admin";
+          }
         }
         
         const userData = {

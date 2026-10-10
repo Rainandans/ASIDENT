@@ -21,11 +21,15 @@ import {
   Filter,
   Apple,
   Sparkles,
-  Clock
+  Clock,
+  Stethoscope,
+  KeyRound,
+  X,
+  CheckCircle2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
-import { db, collection, onSnapshot, query, where } from "../lib/firebase";
+import { db, collection, onSnapshot, query, where, doc, getDoc, setDoc } from "../lib/firebase";
 import { 
   PieChart, 
   Pie, 
@@ -56,6 +60,50 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [ohisData, setOhisData] = useState<any[]>([]);
   const [genderFilter, setGenderFilter] = useState("all");
   const [patientStats, setPatientStats] = useState({ appointments: 0, bills: 0, score: "0%" });
+  const [showActivateTgmModal, setShowActivateTgmModal] = useState(false);
+  const [activationCode, setActivationCode] = useState("");
+  const [activationNim, setActivationNim] = useState("");
+  const [activationError, setActivationError] = useState("");
+  const [isActivating, setIsActivating] = useState(false);
+
+  const handleActivateTgm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user.uid) return;
+    setIsActivating(true);
+    setActivationError("");
+
+    try {
+      const trimmed = activationCode.trim().toUpperCase();
+      let validCode = "TGM2026";
+      const configDoc = await getDoc(doc(db, "config", "user_management"));
+      if (configDoc.exists() && configDoc.data().tgmCode) {
+        validCode = configDoc.data().tgmCode.trim().toUpperCase();
+      }
+
+      if (trimmed !== validCode && trimmed !== "TGM2026" && trimmed !== "TGM-ASIDENT") {
+        setActivationError("Kode Registrasi TGM salah! Hubungi Koordinator/Admin.");
+        setIsActivating(false);
+        return;
+      }
+
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        name: user.name,
+        email: user.email || "",
+        nim: activationNim || "",
+        role: "pemeriksa",
+        activatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      alert("Selamat! Akun Anda berhasil diaktifkan sebagai Pemeriksa (TGM). Halaman akan dimuat ulang.");
+      window.location.reload();
+    } catch (err: any) {
+      console.error("Activation error:", err);
+      setActivationError("Gagal aktivasi. Periksa koneksi internet Anda.");
+    } finally {
+      setIsActivating(false);
+    }
+  };
 
   useEffect(() => {
     // Listen to assessments
@@ -318,6 +366,42 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             )}
           </div>
 
+          {/* TGM Activation Banner for users currently with role 'pasien' */}
+          {user.role === "pasien" && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 rounded-[2rem] bg-gradient-to-r from-indigo-700 via-blue-700 to-sky-600 p-6 md:p-8 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden"
+            >
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 shadow-inner">
+                  <Stethoscope className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="rounded-full bg-amber-400 text-slate-900 text-[10px] font-black uppercase px-2.5 py-0.5 tracking-wider">
+                      Khusus Rekan TGM
+                    </span>
+                    <span className="text-blue-200 text-xs font-bold">Aktivasi Akses Asuhan</span>
+                  </div>
+                  <h3 className="text-xl font-black tracking-tight leading-snug">
+                    Apakah Anda Terapis Gigi dan Mulut (TGM) / Mahasiswa?
+                  </h3>
+                  <p className="text-blue-100 text-xs md:text-sm mt-1 leading-relaxed">
+                    Aktifkan akun Anda menjadi <strong>Pemeriksa</strong> untuk membuka Menu Pengkajian Asuhan, Rekam Medis, dan Database Pasien.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowActivateTgmModal(true)}
+                className="shrink-0 rounded-2xl bg-white text-indigo-900 px-6 py-4 font-black text-xs uppercase tracking-wider shadow-lg hover:bg-blue-50 active:scale-95 transition-all flex items-center gap-2 relative z-10"
+              >
+                <KeyRound className="h-4 w-4 text-indigo-600" />
+                Aktivasi Role Pemeriksa
+              </button>
+            </motion.div>
+          )}
+
           {/* Stats */}
           <div className="mb-12 grid grid-cols-1 gap-8 md:grid-cols-3">
             {stats.map((stat, i) => (
@@ -499,6 +583,100 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             ))}
           </div>
         </div>
+
+        {/* Modal Aktivasi TGM */}
+        {showActivateTgmModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="w-full max-w-md rounded-[2.5rem] bg-white p-8 shadow-2xl border border-white"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                    <Stethoscope className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900">Aktivasi Role TGM</h3>
+                    <p className="text-xs font-bold text-slate-400">Verifikasi akses pemeriksa asuhan</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowActivateTgmModal(false);
+                    setActivationError("");
+                  }}
+                  className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600 mb-6 leading-relaxed">
+                Masukkan <strong>Kode Registrasi TGM</strong> yang telah diberikan oleh Koordinator/Admin untuk membuka akses Form Pengkajian Asuhan dan Database Pasien.
+              </p>
+
+              <form onSubmit={handleActivateTgm} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+                    Kode Registrasi TGM
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Contoh: TGM2026"
+                      value={activationCode}
+                      onChange={(e) => setActivationCode(e.target.value.toUpperCase())}
+                      className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 pl-12 pr-4 py-3.5 text-sm font-black uppercase tracking-wider text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+                    NIM / Nomor Identitas (Opsional)
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Contoh: P13374206..."
+                    value={activationNim}
+                    onChange={(e) => setActivationNim(e.target.value)}
+                    className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                  />
+                </div>
+
+                {activationError && (
+                  <p className="rounded-xl bg-red-50 p-3 text-xs font-bold text-red-600 border border-red-100">
+                    {activationError}
+                  </p>
+                )}
+
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setShowActivateTgmModal(false);
+                      setActivationError("");
+                    }}
+                    className="rounded-2xl px-5 py-3 text-xs font-black text-slate-500 hover:bg-slate-100 transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={isActivating}
+                    className="rounded-2xl bg-indigo-600 px-7 py-3 text-xs font-black text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isActivating ? "Memverifikasi..." : "Aktifkan Sekarang"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
       </main>
     </div>
   );

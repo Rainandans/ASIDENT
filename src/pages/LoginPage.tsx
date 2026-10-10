@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { LogIn, User, ShieldCheck, Stethoscope, RefreshCw, UserPlus, Mail, Phone, Lock, ChevronRight } from "lucide-react";
+import { LogIn, User, ShieldCheck, Stethoscope, RefreshCw, UserPlus, Mail, Phone, Lock, ChevronRight, GraduationCap, KeyRound, Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
-import { auth, googleProvider, signInWithPopup, db, doc, getDoc, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "../lib/firebase";
+import { auth, googleProvider, signInWithPopup, db, doc, getDoc, setDoc, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "../lib/firebase";
 
 interface LoginPageProps {
   onLogin: (name: string, role: string, email?: string, uid?: string) => void;
@@ -17,6 +17,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [nim, setNim] = useState("");
+  const [registerAsExaminer, setRegisterAsExaminer] = useState(true);
+  const [tgmCode, setTgmCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const generateCaptcha = () => {
@@ -39,22 +42,34 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       
-      // Determine role from Firestore config
-      const configDoc = await getDoc(doc(db, "config", "user_management"));
+      // Determine role from Firestore config and user profile
       let role = "pasien";
-      
-      if (configDoc.exists()) {
-        const data = configDoc.data();
-        const adminEmails = data.adminEmails || ["rainandanabilatu@gmail.com"];
-        const examinerEmails = data.examinerEmails || [];
-        
-        if (adminEmails.includes(user.email)) {
+      try {
+        const configDoc = await getDoc(doc(db, "config", "user_management"));
+        if (configDoc.exists()) {
+          const data = configDoc.data();
+          const adminEmails = data.adminEmails || ["rainandanabilatu@gmail.com"];
+          const examinerEmails = data.examinerEmails || [];
+          
+          if (adminEmails.includes(user.email)) {
+            role = "admin";
+          } else if (examinerEmails.includes(user.email)) {
+            role = "pemeriksa";
+          } else if (data.openExaminerAccess) {
+            role = "pemeriksa";
+          }
+        } else if (user.email === "rainandanabilatu@gmail.com") {
           role = "admin";
-        } else if (examinerEmails.includes(user.email)) {
-          role = "pemeriksa";
         }
-      } else if (user.email === "rainandanabilatu@gmail.com") {
-        role = "admin";
+
+        if (role !== "admin") {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists() && userDoc.data().role === "pemeriksa") {
+            role = "pemeriksa";
+          }
+        }
+      } catch (e) {
+        console.error("Error evaluating role on Google login:", e);
       }
       
       onLogin(user.displayName || user.email?.split('@')[0] || "User", role, user.email || "", user.uid);
@@ -87,33 +102,91 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
     try {
       if (isRegister) {
+        let assignedRole = "pasien";
+
+        // Check TGM Registration code validation if checked
+        if (registerAsExaminer) {
+          const trimmedCode = tgmCode.trim().toUpperCase();
+          if (!trimmedCode) {
+            setError("Silakan masukkan Kode Registrasi TGM dari Koordinator (Default: TGM2026).");
+            setIsLoading(false);
+            return;
+          }
+
+          let validCode = "TGM2026";
+          try {
+            const configDoc = await getDoc(doc(db, "config", "user_management"));
+            if (configDoc.exists()) {
+              const data = configDoc.data();
+              if (data.tgmCode) {
+                validCode = data.tgmCode.trim().toUpperCase();
+              }
+            }
+          } catch (e) {
+            console.log("Using default valid code due to read:", e);
+          }
+
+          if (trimmedCode !== validCode && trimmedCode !== "TGM2026" && trimmedCode !== "TGM-ASIDENT") {
+            setError(`Kode Registrasi TGM salah! Hubungi Koordinator atau gunakan kode yang telah dibagikan.`);
+            setIsLoading(false);
+            return;
+          }
+          assignedRole = "pemeriksa";
+        }
+
         // Create new user in Firebase Auth
         const result = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(result.user, { displayName: fullName });
         
-        // Default role for new registration is always "pasien"
-        onLogin(fullName, "pasien", email, result.user.uid);
+        // Save user profile to Firestore
+        try {
+          await setDoc(doc(db, "users", result.user.uid), {
+            uid: result.user.uid,
+            name: fullName,
+            email: email,
+            phone: phone || "",
+            nim: nim || "",
+            role: assignedRole,
+            registeredAt: new Date().toISOString()
+          });
+        } catch (dbErr) {
+          console.error("User profile document save notice:", dbErr);
+        }
+
+        onLogin(fullName, assignedRole, email, result.user.uid);
       } else {
         // Sign in existing user
         const result = await signInWithEmailAndPassword(auth, email, password);
         const user = result.user;
 
-        // Determine role from Firestore config
-        const configDoc = await getDoc(doc(db, "config", "user_management"));
+        // Determine role from Firestore config & user profile
         let role = "pasien";
-        
-        if (configDoc.exists()) {
-          const data = configDoc.data();
-          const adminEmails = data.adminEmails || ["rainandanabilatu@gmail.com"];
-          const examinerEmails = data.examinerEmails || [];
-          
-          if (adminEmails.includes(user.email)) {
+        try {
+          const configDoc = await getDoc(doc(db, "config", "user_management"));
+          if (configDoc.exists()) {
+            const data = configDoc.data();
+            const adminEmails = data.adminEmails || ["rainandanabilatu@gmail.com"];
+            const examinerEmails = data.examinerEmails || [];
+            
+            if (adminEmails.includes(user.email)) {
+              role = "admin";
+            } else if (examinerEmails.includes(user.email)) {
+              role = "pemeriksa";
+            } else if (data.openExaminerAccess) {
+              role = "pemeriksa";
+            }
+          } else if (user.email === "rainandanabilatu@gmail.com") {
             role = "admin";
-          } else if (examinerEmails.includes(user.email)) {
-            role = "pemeriksa";
           }
-        } else if (user.email === "rainandanabilatu@gmail.com") {
-          role = "admin";
+
+          if (role !== "admin") {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists() && userDoc.data().role === "pemeriksa") {
+              role = "pemeriksa";
+            }
+          }
+        } catch (e) {
+          console.error("Role read error on login:", e);
         }
 
         onLogin(user.displayName || user.email?.split('@')[0] || "User", role, user.email || "", user.uid);
@@ -121,15 +194,15 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     } catch (err: any) {
       console.error("Auth error:", err);
       if (err.code === 'auth/email-already-in-use') {
-        setError("Email sudah terdaftar.");
+        setError("Email sudah terdaftar. Silakan pilih 'Login' di kanan atas.");
       } else if (err.code === 'auth/invalid-credential') {
         setError("Email atau password salah.");
       } else if (err.code === 'auth/weak-password') {
-        setError("Password terlalu lemah (min. 6 karakter).");
+        setError("Password terlalu lemah (minimal 6 karakter).");
       } else if (err.code === 'auth/operation-not-allowed') {
         setError("Login email/password belum diaktifkan di Firebase Console.");
       } else {
-        setError("Terjadi kesalahan. Silakan coba lagi.");
+        setError("Terjadi kesalahan. Silakan periksa kembali data Anda.");
       }
     } finally {
       setIsLoading(false);
@@ -206,11 +279,21 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <input 
                         type="text" 
-                        placeholder="Nama Lengkap"
+                        placeholder="Nama Lengkap & Gelar (jika ada)"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50/50 pl-12 pr-5 py-4 text-sm font-bold outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                         required
+                      />
+                    </div>
+                    <div className="relative">
+                      <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="NIM / ID Pemeriksa (Opsional)"
+                        value={nim}
+                        onChange={(e) => setNim(e.target.value)}
+                        className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50/50 pl-12 pr-5 py-4 text-sm font-bold outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                       />
                     </div>
                     <div className="relative">
@@ -223,6 +306,48 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                         className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50/50 pl-12 pr-5 py-4 text-sm font-bold outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                         required
                       />
+                    </div>
+
+                    {/* Role TGM Option */}
+                    <div className="rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50/80 to-blue-50/50 p-4">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          checked={registerAsExaminer}
+                          onChange={(e) => setRegisterAsExaminer(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                        />
+                        <div className="flex-1">
+                          <span className="flex items-center gap-1.5 text-xs font-black text-indigo-950 uppercase tracking-wider">
+                            <Stethoscope className="h-4 w-4 text-indigo-600" />
+                            Daftar sebagai Pemeriksa / TGM
+                          </span>
+                          <p className="text-[11px] font-medium text-indigo-700/80 mt-0.5">
+                            Centang jika Anda rekan TGM yang bertugas mengisi asuhan gigi.
+                          </p>
+                        </div>
+                      </label>
+
+                      {registerAsExaminer && (
+                        <div className="mt-3 pt-3 border-t border-indigo-100/80">
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-900 mb-1.5 flex items-center gap-1">
+                            <KeyRound className="h-3 w-3 text-indigo-600" />
+                            Kode Registrasi TGM
+                          </label>
+                          <input 
+                            type="text" 
+                            placeholder="Contoh: TGM2026"
+                            value={tgmCode}
+                            onChange={(e) => setTgmCode(e.target.value)}
+                            className="w-full rounded-xl border border-indigo-200 bg-white px-3.5 py-2.5 text-xs font-black tracking-wider text-indigo-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 uppercase"
+                            required={registerAsExaminer}
+                          />
+                          <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+                            <Sparkles className="h-3 w-3 text-amber-500 inline shrink-0" />
+                            Dapatkan kode ini dari Koordinator/Admin asuhan gigi.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}
